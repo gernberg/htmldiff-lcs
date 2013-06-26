@@ -73,4 +73,15 @@ describe "htmldiff" do
     diff.should == %|<p><del class="diffmod">Nothing!</del><ins class="diffmod"> Test Paragraph </ins></p>weee<ins class="diffins"><p><ins class="diffins">More Stuff</ins></p></ins>|
   end
 
+  it "should wrap deleted table tags" do
+    doc_a = %|<p> Test Paragraph </p>
+    <p> </p>
+    <table><tbody><tr><td>hello</td><td>bye</td></tr></tbody></table>
+    <p>&nbsp;</p>
+    |
+    doc_b = %|<p>Nothing!</p>|
+    diff = TestDiff.diff(doc_a, doc_b)
+    puts diff
+  end
+
 end

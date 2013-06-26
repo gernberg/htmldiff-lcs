@@ -227,12 +227,12 @@ module HTMLDiff
     # P.S.: Spare a thought for people who write HTML browsers. They live in this ... every day.
 
     def insert_tag(tagname, cssclass, words)
-      wrap_tag = wrapped = false
-      wrap_tag = true if cssclass != 'diffmod'
+      wrapped = false
+      #puts "#{tagname + " " + cssclass} #{words}"
       loop do
         break if words.empty?
         if tag?(words.first)
-          if wrap_tag && !wrapped
+          unless wrapped
             @content << wrap_start(tagname, cssclass)
             wrapped = true
           end
@@ -242,7 +242,7 @@ module HTMLDiff
           @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.empty?
         end
       end
-      @content << wrap_end(tagname) if wrap_tag && wrapped
+      @content << wrap_end(tagname) if wrapped
     end
 
     def wrap_text(text, tagname, cssclass)
