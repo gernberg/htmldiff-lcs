@@ -35,4 +35,11 @@ describe "htmldiff" do
     diff.should == "这<del class=\"diffdel\">个</del>是中<del class=\"diffmod\">文</del><ins class=\"diffmod\">国语</ins>内容<del class=\"diffmod\">, Ruby</del><ins class=\"diffmod\">，Ruby</ins> is the <del class=\"diffmod\">bast</del><ins class=\"diffmod\">best language.</ins>"
   end
 
+  it "should wrap deleted tags" do
+    doc_a = %|<p> Test Paragraph </p><p>More Stuff</p>|
+    doc_b = "<p>Nothing!</p>"
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod"> Test Table </del><ins class="diffmod">Nothing!</ins></p><del class="diffdel"><p>More Stuff</p></del>|
+  end
+
 end
