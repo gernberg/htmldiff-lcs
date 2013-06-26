@@ -37,9 +37,40 @@ describe "htmldiff" do
 
   it "should wrap deleted tags" do
     doc_a = %|<p> Test Paragraph </p><p>More Stuff</p>|
-    doc_b = "<p>Nothing!</p>"
+    doc_b = %|<p>Nothing!</p>|
     diff = TestDiff.diff(doc_a, doc_b)
-    diff.should == %|<p><del class="diffmod"> Test Table </del><ins class="diffmod">Nothing!</ins></p><del class="diffdel"><p>More Stuff</p></del>|
+    diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p><del class="diffdel"><p><del class="diffdel">More Stuff</del></p></del>|
+  end
+
+  it "should wrap inserted tags" do
+    doc_a = %|<p>Nothing!</p>|
+    doc_b = %|<p> Test Paragraph </p><p>More Stuff</p>|
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod">Nothing!</del><ins class="diffmod"> Test Paragraph </ins></p><ins class="diffins"><p><ins class="diffins">More Stuff</ins></p></ins>|
+  end
+
+  it "should wrap deleted tags even with text around" do
+    doc_a = %|<p> Test Paragraph </p>weee<p>More Stuff</p>|
+    doc_b = %|<p>Nothing!</p>weee|
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<del class="diffdel"><p><del class="diffdel">More Stuff</del></p></del>|
+
+    doc_a = %|<p> Test Paragraph </p>weee<p>More Stuff</p>|
+    doc_b = %|<p>Nothing!</p>|
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p><del class="diffdel">weee</del><del class="diffdel"><p><del class="diffdel">More Stuff</del></p></del>|
+
+    doc_a = %|<p> Test Paragraph </p>weee<p>More Stuff</p>asd|
+    doc_b = %|<p>Nothing!</p>weee asd|
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<del class="diffdel"><p><del class="diffdel">More</del></del> <del class="diffdel">Stuff</del><del class="diffdel"></p></del>asd|
+  end
+
+  it "should wrap inserted tags even with text around" do
+    doc_a = %|<p>Nothing!</p>weee|
+    doc_b = %|<p> Test Paragraph </p>weee<p>More Stuff</p>|
+    diff = TestDiff.diff(doc_a, doc_b)
+    diff.should == %|<p><del class="diffmod">Nothing!</del><ins class="diffmod"> Test Paragraph </ins></p>weee<ins class="diffins"><p><ins class="diffins">More Stuff</ins></p></ins>|
   end
 
 end

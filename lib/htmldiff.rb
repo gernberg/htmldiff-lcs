@@ -83,6 +83,8 @@ module HTMLDiff
         position_in_new = match.end_in_new
       end
 
+      puts operations
+
       operations
     end
 
@@ -180,7 +182,7 @@ module HTMLDiff
     end
 
     def delete(operation, tagclass = 'diffdel')
-       insert_tag('del', tagclass, @old_words[operation.start_in_old...operation.end_in_old])
+      insert_tag('del', tagclass, @old_words[operation.start_in_old...operation.end_in_old])
     end
 
     def equal(operation)
@@ -227,18 +229,39 @@ module HTMLDiff
     # P.S.: Spare a thought for people who write HTML browsers. They live in this ... every day.
 
     def insert_tag(tagname, cssclass, words)
+      wrap_tag = wrapped = false
+      wrap_tag = true if cssclass != 'diffmod'
+      puts "#{tagname} #{words}"
       loop do
         break if words.empty?
-        non_tags = extract_consecutive_words(words) { |word| not tag?(word) }
-        @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.empty?
-
-        break if words.empty?
-        @content += extract_consecutive_words(words) { |word| tag?(word) }
+        if tag?(words.first)
+          if wrap_tag && !wrapped
+            @content << wrap_start(tagname, cssclass)
+            wrapped = true
+          end
+          @content += extract_consecutive_words(words) { |word| tag?(word) }
+        else
+          non_tags = extract_consecutive_words(words) { |word| not tag?(word) }
+          @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.empty?
+        end
       end
+      @content << wrap_end(tagname) if wrap_tag && wrapped
     end
 
     def wrap_text(text, tagname, cssclass)
-      %(<#{tagname} class="#{cssclass}">#{text}</#{tagname}>)
+      # %(<#{tagname} class="#{cssclass}">#{text}</#{tagname}>)
+      [ wrap_start(tagname, cssclass),
+        text,
+        wrap_end(tagname)
+      ].join
+    end
+
+    def wrap_start(tagname, cssclass)
+      %|<#{tagname} class="#{cssclass}">|
+    end
+
+    def wrap_end(tagname)
+      %|</#{tagname}>|
     end
 
     def explode(sequence)
