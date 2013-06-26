@@ -83,8 +83,6 @@ module HTMLDiff
         position_in_new = match.end_in_new
       end
 
-      puts operations
-
       operations
     end
 
@@ -231,7 +229,6 @@ module HTMLDiff
     def insert_tag(tagname, cssclass, words)
       wrap_tag = wrapped = false
       wrap_tag = true if cssclass != 'diffmod'
-      puts "#{tagname} #{words}"
       loop do
         break if words.empty?
         if tag?(words.first)
