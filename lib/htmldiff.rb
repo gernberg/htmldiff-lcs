@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 module HTMLDiff
 
   Match = Struct.new(:start_in_old, :start_in_new, :size)
@@ -217,7 +219,7 @@ module HTMLDiff
     # with a twist: if there are words contain tags, it actually creates multiple ins or del,
     # so that they don't include any ins or del. This handles cases like
     # old: '<p>a</p>'
-    # new: '<p>ab</p><p>c</b>'
+    # new: '<p>ab</p><p>c</p>'
     # diff result: '<p>a<ins>b</ins></p><p><ins>c</ins></p>'
     # this still doesn't guarantee valid HTML (hint: think about diffing a text containing ins or
     # del tags), but handles correctly more cases than the earlier version.
@@ -255,6 +257,10 @@ module HTMLDiff
       char =~ /\s/
     end
 
+    def char?(char)
+      char =~ /[\w\#@]+/i
+    end
+
     def convert_html_to_list_of_words(x, use_brackets = false)
       mode = :char
       current_word  = ''
@@ -267,7 +273,7 @@ module HTMLDiff
             current_word << (use_brackets ? ']' : '>')
             words << current_word
             current_word = ''
-            if whitespace?(char)
+            if whitespace? char
               mode = :whitespace
             else
               mode = :char
@@ -280,11 +286,11 @@ module HTMLDiff
             words << current_word unless current_word.empty?
             current_word = (use_brackets ? '[' : '<')
             mode = :tag
-          elsif /\s/.match char
+          elsif whitespace? char
             words << current_word unless current_word.empty?
             current_word = char
             mode = :whitespace
-          elsif /[\w\#@]+/i.match char
+          elsif char? char
             current_word << char
           else
             words << current_word unless current_word.empty?
@@ -295,7 +301,7 @@ module HTMLDiff
             words << current_word unless current_word.empty?
             current_word = (use_brackets ? '[' : '<')
             mode = :tag
-          elsif /\s/.match char
+          elsif whitespace? char
             current_word << char
           else
             words << current_word unless current_word.empty?
