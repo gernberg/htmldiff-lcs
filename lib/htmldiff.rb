@@ -240,7 +240,7 @@ module HTMLDiff
     end
 
     def explode(sequence)
-      sequence.is_a?(String) ? sequence.split("") : sequence
+      sequence.is_a?(String) ? sequence.chars : sequence
     end
 
     def end_of_tag?(char)
@@ -286,7 +286,7 @@ module HTMLDiff
             mode = :whitespace
           elsif /[\w\#@]+/i.match char
             current_word << char
-					else
+          else
             words << current_word unless current_word.empty?
             current_word = char
           end
