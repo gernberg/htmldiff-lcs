@@ -108,5 +108,19 @@ describe "htmldiff" do
     </table>|
   end
 
+
+  it "should support img tags insertion" do
+    oldv = 'a b c'
+    newv = 'a b <img src="some_url" /> c'
+    diff = HTMLDiff.diff(oldv, newv)
+    diff.should == "a b <ins class=\"diffins\"><img src=\"some_url\" /> </ins>c"
+  end
   
+  it "should support img tags deletion" do
+    oldv = 'a b c'
+    newv = 'a b <img src="some_url" /> c'
+    diff = HTMLDiff.diff(newv, oldv)
+    diff.should == "a b <del class=\"diffdel\"><img src=\"some_url\" /> </del>c"
+  end
+
 end
