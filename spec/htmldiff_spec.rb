@@ -121,6 +121,34 @@ describe "htmldiff" do
     diff = HTMLDiff.diff(oldv, newv)
     diff.should == "a b <ins class=\"diffins\"><img src=\"some_url\" /> </ins>c"
   end
+
+  it 'wraps img tags inside other tags' do
+    oldv = %|<p>text</p>|
+    newv = %|<p>text<img src="something" /></p>|
+    diff = HTMLDiff.diff(oldv, newv)
+    diff.should == %|<p>text<ins class="diffins"><img src="something" /></ins></p>|
+  end
+
+  it 'wraps img tags inserted with other tags' do
+    oldv = %|text|
+    newv = %|text<p><img src="something" /></p>|
+    diff = HTMLDiff.diff(oldv, newv)
+    diff.should == %|text<ins class="diffins"><p><img src="something" /></p></ins>|
+  end
+
+  it 'wraps img tags inserted with other tags and new lines' do
+    oldv = %|text|
+    newv = %|text<p>\r\n<img src="something" />\r\n</p>|
+    diff = HTMLDiff.diff(oldv, newv)
+    diff.should == %|text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something" />\r\n</ins></p></ins>|
+  end
+
+  it 'wraps badly terminated img tags inserted with other tags and new lines' do
+    oldv = %|text|
+    newv = %|text<p>\r\n<img src="something">\r\n</p>|
+    diff = HTMLDiff.diff(oldv, newv)
+    diff.should == %|text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something">\r\n</ins></p></ins>|
+  end
   
   it "should support img tags deletion" do
     oldv = 'a b c'
