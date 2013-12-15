@@ -232,10 +232,19 @@ module HTMLDiff
 
     def insert_tag(tagname, cssclass, words)
       wrapped = false
-      #puts "#{tagname + " " + cssclass} #{words}"
+      puts "#{tagname + " " + cssclass} #{words}"
+
       loop do
+
         break if words.empty?
-        if tag?(words.first)
+
+        #non_tags = extract_consecutive_words(words) { |word| not tag?(word) }
+        #@content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.empty?
+        #
+        #break if words.empty?
+        #@content += extract_consecutive_words(words) { |word| tag?(word) }
+
+        if tag?(words.first) && !(img_tag?(words.first))
           unless wrapped
             @content << wrap_start(tagname, cssclass)
             wrapped = true
@@ -243,13 +252,14 @@ module HTMLDiff
           @content += extract_consecutive_words(words) { |word| tag?(word) }
         else
           non_tags = extract_consecutive_words(words) { |word| (img_tag?(word)) || (!tag?(word)) }
-          @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.join.strip.empty?
+          @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.join.empty?
+          #end
 
           break if words.empty?
-          @content += extract_consecutive_words(words) { |word| tag?(word) }
         end
       end
       @content << wrap_end(tagname) if wrapped
+
     end
 
     def wrap_text(text, tagname, cssclass)
