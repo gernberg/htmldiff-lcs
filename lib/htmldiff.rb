@@ -135,11 +135,6 @@ module HTMLDiff
         match_length_at = new_match_length_at
       end
 
-#      best_match_in_old, best_match_in_new, best_match_size = add_matching_words_left(
-#          best_match_in_old, best_match_in_new, best_match_size, start_in_old, start_in_new)
-#      best_match_in_old, best_match_in_new, match_size = add_matching_words_right(
-#          best_match_in_old, best_match_in_new, best_match_size, end_in_old, end_in_new)
-
       return (best_match_size != 0 ? Match.new(best_match_in_old, best_match_in_new, best_match_size) : nil)
     end
 
@@ -232,17 +227,10 @@ module HTMLDiff
 
     def insert_tag(tagname, cssclass, words)
       wrapped = false
-      #puts "#{tagname + " " + cssclass} #{words}"
 
       loop do
 
         break if words.empty?
-
-        #non_tags = extract_consecutive_words(words) { |word| not tag?(word) }
-        #@content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.empty?
-        #
-        #break if words.empty?
-        #@content += extract_consecutive_words(words) { |word| tag?(word) }
 
         if tag?(words.first) && !(img_tag?(words.first))
           unless wrapped
@@ -253,7 +241,6 @@ module HTMLDiff
         else
           non_tags = extract_consecutive_words(words) { |word| (img_tag?(word)) || (!tag?(word)) }
           @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.join.empty?
-          #end
 
           break if words.empty?
         end
@@ -263,7 +250,6 @@ module HTMLDiff
     end
 
     def wrap_text(text, tagname, cssclass)
-      # %(<#{tagname} class="#{cssclass}">#{text}</#{tagname}>)
       [ wrap_start(tagname, cssclass),
         text,
         wrap_end(tagname)
