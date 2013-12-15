@@ -232,7 +232,7 @@ module HTMLDiff
 
     def insert_tag(tagname, cssclass, words)
       wrapped = false
-      puts "#{tagname + " " + cssclass} #{words}"
+      #puts "#{tagname + " " + cssclass} #{words}"
 
       loop do
 
