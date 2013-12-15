@@ -196,7 +196,7 @@ module HTMLDiff
     end
     
     def img_tag?(item)
-      (item[0..4].downcase == '<img ') && (item[-2..-1].downcase == '/>')
+      (item[0..4].downcase == '<img ') && (item[-2..-1].downcase =~ /\/?>/)
     end
 
     def extract_consecutive_words(words, &condition)
