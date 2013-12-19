@@ -61,10 +61,20 @@ module HTMLDiff
       matches << Match.new(@old_words.length, @new_words.length, 0)
 
       matches.each_with_index do |match, i|
+
+        # We have a problem with single space matches found in between words which are otherwise different.
+        # If we find a match that is just a single space, then we should ignore it so that the
+        # changes before and after it merge together.
+        old_text = @old_words[match.start_in_old...match.end_in_old].join
+        new_text = @new_words[match.start_in_new...match.end_in_new].join
+        if old_text == ' ' && old_text == new_text
+          next
+        end
+
         match_starts_at_current_position_in_old = (position_in_old == match.start_in_old)
         match_starts_at_current_position_in_new = (position_in_new == match.start_in_new)
 
-        # Based on where the match starts and ends, work out what the following non-matching bit represents.
+        # Based on where the match starts and ends, work out what the preceding non-matching bit represents.
         action_upto_match_positions =
           case [match_starts_at_current_position_in_old, match_starts_at_current_position_in_new]
           when [false, false]

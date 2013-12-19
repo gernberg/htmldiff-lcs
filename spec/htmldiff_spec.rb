@@ -30,6 +30,11 @@ describe "HTMLDiff" do
         diff = HTMLDiff.diff('这个是中文内容, Ruby is the bast', '这是中国语内容，Ruby is the best language.')
         diff.should == "这<del class=\"diffdel\">个</del>是中<del class=\"diffmod\">文</del><ins class=\"diffmod\">国语</ins>内容<del class=\"diffmod\">, Ruby</del><ins class=\"diffmod\">，Ruby</ins> is the <del class=\"diffmod\">bast</del><ins class=\"diffmod\">best language.</ins>"
       end
+
+      it 'puts long bit of replaced text together, rather than breaking on word boundaries' do
+        diff = HTMLDiff.diff('a long bit of text', 'some totally different text')
+        diff.should == '<del class="diffmod">a long bit of</del><ins class="diffmod">some totally different</ins> text'
+      end
     end
 
     describe 'simple tags' do
@@ -66,7 +71,7 @@ describe "HTMLDiff" do
           doc_a = %|<p> Test Paragraph </p>weee<p>More Stuff</p>asd|
           doc_b = %|<p>Nothing!</p>weee asd|
           diff = HTMLDiff.diff(doc_a, doc_b)
-          diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<p><del class="diffdel">More</del> <del class="diffdel">Stuff</del></p>asd|
+          diff.should == %|<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<del class="diffmod"><p><del class="diffmod">More Stuff</del></p></del><ins class="diffmod"> </ins>asd|
         end
       end
 
