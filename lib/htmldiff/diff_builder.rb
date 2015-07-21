@@ -1,6 +1,10 @@
+require 'nokogiri'
+
 module HTMLDiff
   # Main class for building the diff output between two strings
   class DiffBuilder
+    attr_reader :operations, :content
+
     def initialize(old_version, new_version, options = {})
       @old_version, @new_version, @options = old_version, new_version, options
       @content = []
@@ -12,8 +16,13 @@ module HTMLDiff
     def build
       split_inputs_to_words
       index_new_words
+      define_operations
+      perform_operations
+      content.join
+    end
+
+    def perform_operations
       operations.each { |op| perform_operation(op) }
-      @content.join
     end
 
     def split_inputs_to_words
@@ -35,67 +44,64 @@ module HTMLDiff
     # The method is to move along the old and new strings, marking the bits
     # between the matched portions as insert, delete or replace by creating an
     # instance of Operation for each one.
-    def operations
-      position_in_old = position_in_new = 0 # Starting point of potential difference (end of last match, or start of string)
-      operations = []
+    def define_operations
+      @position_in_old = @position_in_new = 0 # Starting point of potential difference (end of last match, or start of string)
+      @operations = []
 
-      matches = matching_blocks
-      # an empty match at the end forces the loop below to handle the unmatched tails
-      # I'm sure it can be done more gracefully, but not at 23:52
-      matches << HTMLDiff::Match.new(@old_words.length, @new_words.length, 0)
+      matching_blocks.each do |match|
+        create_operatiion_from(match)
+      end
+    end
 
-      matches.each_with_index do |match, i|
+    def create_operatiion_from(match)
 
-        # We have a problem with single space matches found in between words
-        # which are otherwise different. If we find a match that is just a
-        # single space, then we should ignore it so that the # changes before
-        # and after it merge together.
-        old_text = @old_words[match.start_in_old...match.end_in_old].join
-        new_text = @new_words[match.start_in_new...match.end_in_new].join
-        if old_text == ' ' && old_text == new_text
-          next
-        end
-
-        match_starts_at_current_position_in_old = (position_in_old == match.start_in_old)
-        match_starts_at_current_position_in_new = (position_in_new == match.start_in_new)
-
-        # Based on where the match starts and ends, work out what the preceding
-        # non-matching bit represents.
-        action_upto_match_positions =
-          case [match_starts_at_current_position_in_old, match_starts_at_current_position_in_new]
-            when [false, false]
-              :replace
-            when [true, false]
-              :insert
-            when [false, true]
-              :delete
-            else
-              # this happens if the first few words are same in both versions
-              :none
-          end
-
-        # This operation will add the <ins> or <del> tag, plus the content
-        # that has changed.
-        if action_upto_match_positions != :none
-          operation_upto_match_positions =
-            Operation.new(action_upto_match_positions,
-                          position_in_old, match.start_in_old,
-                          position_in_new, match.start_in_new)
-          operations << operation_upto_match_positions
-        end
-        if match.size != 0
-          match_operation = Operation.new(:equal,
-                                          match.start_in_old, match.end_in_old,
-                                          match.start_in_new, match.end_in_new)
-          operations << match_operation
-        end
-
-        # Move to the end of the match (start of next difference).
-        position_in_old = match.end_in_old
-        position_in_new = match.end_in_new
+      # We have a problem with single space matches found in between words
+      # which are otherwise different. If we find a match that is just a
+      # single space, then we should ignore it so that the # changes before
+      # and after it merge together.
+      old_text = @old_words[match.start_in_old...match.end_in_old].join
+      new_text = @new_words[match.start_in_new...match.end_in_new].join
+      if old_text == ' ' && old_text == new_text
+        return
       end
 
-      operations
+      match_starts_at_current_position_in_old = (@position_in_old == match.start_in_old)
+      match_starts_at_current_position_in_new = (@position_in_new == match.start_in_new)
+
+      # Based on where the match starts and ends, work out what the preceding
+      # non-matching bit represents.
+      action_upto_match_positions =
+        case [match_starts_at_current_position_in_old, match_starts_at_current_position_in_new]
+          when [false, false]
+            :replace
+          when [true, false]
+            :insert
+          when [false, true]
+            :delete
+          else
+            # this happens if the first few words are same in both versions
+            :none
+        end
+
+      # This operation will add the <ins> or <del> tag, plus the content
+      # that has changed.
+      if action_upto_match_positions != :none
+        operation_upto_match_positions =
+          Operation.new(action_upto_match_positions,
+                        @position_in_old, match.start_in_old,
+                        @position_in_new, match.start_in_new)
+        @operations << operation_upto_match_positions
+      end
+      if match.size != 0
+        match_operation = Operation.new(:equal,
+                                        match.start_in_old, match.end_in_old,
+                                        match.start_in_new, match.end_in_new)
+        @operations << match_operation
+      end
+
+      # Move to the end of the match (start of next difference).
+      @position_in_old = match.end_in_old
+      @position_in_new = match.end_in_new
     end
 
     # The returned array is of matches in the order in which they appear in the
@@ -104,8 +110,12 @@ module HTMLDiff
     # and the length in number of words.
     def matching_blocks
       matching_blocks = []
-      recursively_find_matching_blocks(0, @old_words.size, 0, @new_words.size, matching_blocks)
-      matching_blocks
+      recursively_find_matching_blocks(0, @old_words.size, 0,
+                                       @new_words.size, matching_blocks)
+      # an empty match at the end forces the loop to make operations to handle
+      # the unmatched tails I'm sure it can be done more gracefully, but not at
+      # 23:52
+      matching_blocks << HTMLDiff::Match.new(@old_words.length, @new_words.length, 0)
     end
 
     # The first time this is called, it checks the whole of the two strings.
@@ -130,7 +140,6 @@ module HTMLDiff
     # This will find the longest matching set of words when comparing the given
     # ranges in @old_words and @new_words.
     def find_match(start_in_old, end_in_old, start_in_new, end_in_new)
-
       start_of_best_match_in_old = start_in_old
       start_of_best_match_in_new = start_in_new
       best_match_size = 0
@@ -178,12 +187,17 @@ module HTMLDiff
           end
         end
 
-        # We have now added the current word to all the matches we had so far, making some of them longer by 1.
-        # Any matches that are shorter (didn't have the current word as the next word) are discarded.
+        # We have now added the current word to all the matches we had so far,
+        # making some of them longer by 1. Any matches that are shorter (didn't
+        # have the current word as the next word) are discarded.
         match_length_at = new_match_length_at
       end
 
-      (best_match_size != 0 ? HTMLDiff::Match.new(start_of_best_match_in_old, start_of_best_match_in_new, best_match_size) : nil)
+      if best_match_size != 0
+        HTMLDiff::Match.new(start_of_best_match_in_old,
+                            start_of_best_match_in_new,
+                            best_match_size)
+      end
     end
 
     def add_matching_words_left(match_in_old, match_in_new, match_size, start_in_old, start_in_new)
@@ -216,9 +230,10 @@ module HTMLDiff
 
     # @param [HTMLDiff::Operation] operation
     def replace(operation)
-      # Special case: a tag has been altered so that an attribute has been added e.g.
-      # <p> becomes <p style="margin: 2px"> due to an editor button press. For this, we just
-      # Show the new version, otherwise it gets messy trying to find the closing tag.
+      # Special case: a tag has been altered so that an attribute has been
+      # added e.g. <p> becomes <p style="margin: 2px"> due to an editor button
+      # press. For this, we just Show the new version, otherwise it gets messy
+      # trying to find the closing tag.
       old_text = @old_words[operation.start_in_old...operation.end_in_old].join
       new_text = @new_words[operation.start_in_new...operation.end_in_new].join
       if same_tag?(old_text, new_text)
@@ -239,7 +254,8 @@ module HTMLDiff
     end
 
     def equal(operation)
-      # no tags to insert, simply copy the matching words from one of the versions
+      # no tags to insert, simply copy the matching words from one of the
+      # versions
       @content += @new_words[operation.start_in_new...operation.end_in_new]
     end
 
@@ -255,7 +271,8 @@ module HTMLDiff
       item.downcase =~ /<(img|hr|br)/
     end
 
-    # Ignores any attributes and tells us if the tag is the same e.g. <p> and <p style="margin: 2px;">
+    # Ignores any attributes and tells us if the tag is the same e.g. <p> and
+    # <p style="margin: 2px;">
     def same_tag?(first_tag, second_tag)
       pattern = /<([^>\s]+)[\s>]{1}.*/
       first_tagname = pattern.match(first_tag) # nil means they are not tags
@@ -318,9 +335,10 @@ module HTMLDiff
           @content << wrap_text(img_tag, tagname, cssclass)
         elsif tag?(words.first)
 
-          # If this chunk of text contains orphaned tags, then wrapping it will cause weirdness.
-          # This would be the case if we have e.g. a style applied to a paragraph tag, which will
-          # change the opening tag, but not the closing tag.
+          # If this chunk of text contains orphaned tags, then wrapping it will
+          # cause weirdness. This would be the case if we have e.g. a style
+          # applied to a paragraph tag, which will change the opening tag, but
+          # not the closing tag.
           #
           # If we do decide to wrap the whole
 
@@ -377,12 +395,14 @@ module HTMLDiff
       char =~ /[\w\#@]+/i
     end
 
-    def convert_html_to_list_of_words(x, use_brackets = false)
+    def convert_html_to_list_of_words(character_array, use_brackets = false)
       mode = :char
       current_word = ''
       words = []
 
-      explode(x).each do |char|
+      while character_array.length > 0
+        char = character_array.first
+
         case mode
           when :tag
             if end_of_tag? char
@@ -427,6 +447,8 @@ module HTMLDiff
           else
             raise "Unknown mode #{mode.inspect}"
         end
+
+        character_array.shift # Remove this character now we are done
       end
       words << current_word unless current_word.empty?
       words
