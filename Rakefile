@@ -1,8 +1,9 @@
 require 'rubygems'
-require 'rake/gempackagetask'
+require 'rubygems/package_task'
 require 'rubygems/specification'
 require 'date'
-require 'spec/rake/spectask'
+require 'rspec'
+require 'rspec/core/rake_task'
 
 GEM = "htmldiff"
 GEM_VERSION = "0.0.1"
@@ -34,13 +35,13 @@ end
 task :default => :spec
 
 desc "Run specs"
-Spec::Rake::SpecTask.new do |t|
+RSpec::Core::RakeTask.new do |t|
   t.spec_files = FileList['spec/**/*_spec.rb']
   t.spec_opts = %w(-fs --color)
 end
 
 
-Rake::GemPackageTask.new(spec) do |pkg|
+Gem::PackageTask.new(spec) do |pkg|
   pkg.gem_spec = spec
 end
 
