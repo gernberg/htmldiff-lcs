@@ -12,93 +12,93 @@ describe 'HTMLDiff' do
 
     describe 'contains_unclosed_tag?' do
       it 'returns true with an open <p> tag' do
-        the_builder.contains_unclosed_tag?('<p>').should be_true
+        expect(the_builder.contains_unclosed_tag?('<p>')).to be_true
       end
 
       it 'returns true with an unclosed closed <p> tag with an attribute' do
-        the_builder.contains_unclosed_tag?('<p style="margin: 20px">').should be_true
+        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">')).to be_true
       end
 
       it 'returns true with an unclosed closed <p> tag with an attribute that contains stuff' do
-        the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah').should be_true
+        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah')).to be_true
       end
 
       it 'returns false with a properly closed <p> tag' do
-        the_builder.contains_unclosed_tag?('<p></p>').should be_false
+        expect(the_builder.contains_unclosed_tag?('<p></p>')).to be_false
       end
 
       it 'returns false with a properly closed <p> tag with an attribute' do
-        the_builder.contains_unclosed_tag?('<p style="margin: 20px"></p>').should be_false
+        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px"></p>')).to be_false
       end
 
       it 'returns false with a properly closed <p> tag with an attribute that contains stuff' do
-        the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah</p>').should be_false
+        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah</p>')).to be_false
       end
 
       it 'returns false with a self closing tag' do
-        the_builder.contains_unclosed_tag?('<img />').should be_false
+        expect(the_builder.contains_unclosed_tag?('<img />')).to be_false
       end
     end
 
     describe 'unclosed_tag' do
       it 'returns the tag when there is nothing else' do
-        the_builder.unclosed_tag('<p>').should == 'p'
+        expect(the_builder.unclosed_tag('<p>')).to eq('p')
       end
 
       it 'returns the tag when there is preceding text' do
-        the_builder.unclosed_tag('blah<p>').should == 'p'
+        expect(the_builder.unclosed_tag('blah<p>')).to eq('p')
       end
 
       it 'returns the tag when there is following text' do
-        the_builder.unclosed_tag('<p>blah').should == 'p'
+        expect(the_builder.unclosed_tag('<p>blah')).to eq('p')
       end
 
       it 'returns the tag when there is an attribute' do
-        the_builder.unclosed_tag('<p style="margin: 2em;">').should == 'p'
+        expect(the_builder.unclosed_tag('<p style="margin: 2em;">')).to eq('p')
       end
     end
 
     describe 'opening_tag?' do
       it 'returns true for <p>' do
-        the_builder.opening_tag?('<p>').should be_true
+        expect(the_builder.opening_tag?('<p>')).to be_true
       end
 
       it 'returns true for <p> with spaces' do
-        the_builder.opening_tag?(' <p> ').should be_true
+        expect(the_builder.opening_tag?(' <p> ')).to be_true
       end
 
       it 'returns true for a tag with a url' do
-        the_builder.opening_tag?('<a href="http://google.com">').should be_true
+        expect(the_builder.opening_tag?('<a href="http://google.com">')).to be_true
       end
 
       it 'returns false for </p>' do
-        the_builder.opening_tag?('</p>').should be_false
+        expect(the_builder.opening_tag?('</p>')).to be_false
       end
 
       it 'returns false for </p> with spaces' do
-        the_builder.opening_tag?(' </p> ').should be_false
+        expect(the_builder.opening_tag?(' </p> ')).to be_false
       end
 
       it 'returns false for internal del tags' do
-        the_builder.opening_tag?('<del class="diffdel">More</del>').should be_false
+        expect(the_builder.opening_tag?('<del class="diffdel">More</del>')).to be_false
       end
     end
 
     describe 'same_tag?' do
       it 'returns true for identical simple tags' do
-        the_builder.same_tag?('<p>', '<p>').should be_true
+        expect(the_builder.same_tag?('<p>', '<p>')).to be_true
       end
 
       it 'returns true for one simple and one complex tag' do
-        the_builder.same_tag?('<p>', '<p style="margin: 2px;">').should be_true
+        expect(the_builder.same_tag?('<p>', '<p style="margin: 2px;">')).to be_true
       end
 
       it 'returns false for non matching simple tags' do
-        the_builder.same_tag?('<b>', '<p>').should be_false
+        expect(the_builder.same_tag?('<b>', '<p>')).to be_false
       end
 
       it 'should return false for random text' do
-        the_builder.same_tag?('blah', 'blah').should be_false
+        expect(the_builder.same_tag?('blah', 'blah')).to be_false
       end
     end
   end

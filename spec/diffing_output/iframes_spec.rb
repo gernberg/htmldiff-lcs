@@ -8,7 +8,7 @@ describe 'HTMLDiff' do
         oldv = 'a b c'
         newv = 'a b <iframe src="some_url"></iframe> c'
         diff = HTMLDiff.diff(oldv, newv)
-        diff.should == 'a b <ins class="diffins"><iframe src="some_url"></iframe></ins><ins class="diffins"> </ins>c'
+        expect(diff).to eq('a b <ins class="diffins"><iframe src="some_url"></iframe></ins><ins class="diffins"> </ins>c')
       end
 
       it 'wraps iframe inserts with extra stuff' do
@@ -21,13 +21,13 @@ describe 'HTMLDiff' do
       </div>
   '
         diff = HTMLDiff.diff(oldv, newv)
-        diff.should == '<ins class="diffins">
+        expect(diff).to eq('<ins class="diffins">
       </ins><ins class="diffins"><div class="iframe-wrap scribd"><ins class="diffins">
       </ins><div class="iframe-aspect-ratio"><ins class="diffins">
       </ins></div><ins class="diffins">
       </ins><ins class="diffins"><iframe src="url"></iframe></ins><ins class="diffins">
       </ins></div><ins class="diffins">
-  </ins></ins>'
+  </ins></ins>')
 
       end
     end
