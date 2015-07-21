@@ -6,7 +6,6 @@ describe 'HTMLDiff' do
   # These are really tests of private methods and should be considered
   # disposable if the code needs refactoring.
   describe 'internal methods' do
-
     let(:the_match) { double(HTMLDiff::Match) }
     let(:the_builder) { HTMLDiff::DiffBuilder.new('', '') }
 
@@ -16,11 +15,14 @@ describe 'HTMLDiff' do
       end
 
       it 'returns true with an unclosed closed <p> tag with an attribute' do
-        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">')).to be_true
+        html = '<p style="margin: 20px">'
+        expect(the_builder.contains_unclosed_tag?(html)).to be_true
       end
 
-      it 'returns true with an unclosed closed <p> tag with an attribute that contains stuff' do
-        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah')).to be_true
+      it 'returns true with an unclosed closed <p> tag with an attribute '\
+      'that contains stuff' do
+        html = '<p style="margin: 20px">blah'
+        expect(the_builder.contains_unclosed_tag?(html)).to be_true
       end
 
       it 'returns false with a properly closed <p> tag' do
@@ -28,11 +30,14 @@ describe 'HTMLDiff' do
       end
 
       it 'returns false with a properly closed <p> tag with an attribute' do
-        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px"></p>')).to be_false
+        html = '<p style="margin: 20px"></p>'
+        expect(the_builder.contains_unclosed_tag?(html)).to be_false
       end
 
-      it 'returns false with a properly closed <p> tag with an attribute that contains stuff' do
-        expect(the_builder.contains_unclosed_tag?('<p style="margin: 20px">blah</p>')).to be_false
+      it 'returns false with a properly closed <p> tag with an attribute '\
+      'that contains stuff' do
+        html = '<p style="margin: 20px">blah</p>'
+        expect(the_builder.contains_unclosed_tag?(html)).to be_false
       end
 
       it 'returns false with a self closing tag' do
@@ -68,7 +73,8 @@ describe 'HTMLDiff' do
       end
 
       it 'returns true for a tag with a url' do
-        expect(the_builder.opening_tag?('<a href="http://google.com">')).to be_true
+        a_tag = '<a href="http://google.com">'
+        expect(the_builder.opening_tag?(a_tag)).to be_true
       end
 
       it 'returns false for </p>' do
@@ -80,7 +86,8 @@ describe 'HTMLDiff' do
       end
 
       it 'returns false for internal del tags' do
-        expect(the_builder.opening_tag?('<del class="diffdel">More</del>')).to be_false
+        del_tag = '<del class="diffdel">More</del>'
+        expect(the_builder.opening_tag?(del_tag)).to be_false
       end
     end
 
@@ -90,7 +97,9 @@ describe 'HTMLDiff' do
       end
 
       it 'returns true for one simple and one complex tag' do
-        expect(the_builder.same_tag?('<p>', '<p style="margin: 2px;">')).to be_true
+        tag = '<p>'
+        tag_with_attrs = '<p style="margin: 2px;">'
+        expect(the_builder.same_tag?(tag, tag_with_attrs)).to be_true
       end
 
       it 'returns false for non matching simple tags' do
