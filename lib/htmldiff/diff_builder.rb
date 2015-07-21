@@ -2,9 +2,11 @@ module HTMLDiff
   # Main class for building the diff output between two strings
   class DiffBuilder
     def initialize(old_version, new_version, options = {})
-      @old_version, @new_version = old_version, new_version
+      @old_version, @new_version, @options = old_version, new_version, options
       @content = []
-      @unclosed_tags = [] # This keeps count of any HTML tags that have attributes changed, which makes only one of them show up.
+      # This keeps count of any HTML tags that have attributes changed, which
+      # makes only one of them show up.
+      @unclosed_tags = []
     end
 
     def build
@@ -19,17 +21,20 @@ module HTMLDiff
       @new_words = convert_html_to_list_of_words(explode(@new_version))
     end
 
-    # This leaves us with { first => [1], 'second' => [2, 3] } to tell us where in @new_words each word appears.
+    # This leaves us with { first => [1], 'second' => [2, 3] } to tell us where
+    # in @new_words each word appears.
     def index_new_words
       @word_indices = Hash.new { |h, word| h[word] = [] }
       @new_words.each_with_index { |word, i| @word_indices[word] << i }
     end
 
-    # This gets an array of the sections of the two strings that match, then returns an array of operations
-    # that need to be performed in order to build the HTML output that will show the diff.
+    # This gets an array of the sections of the two strings that match, then
+    # returns an array of operations that need to be performed in order to
+    # build the HTML output that will show the diff.
     #
-    # The method is to move along the old and new strings, marking the bits between the matched portions as
-    # insert, delete or replace by creating an instance of Operation for each one.
+    # The method is to move along the old and new strings, marking the bits
+    # between the matched portions as insert, delete or replace by creating an
+    # instance of Operation for each one.
     def operations
       position_in_old = position_in_new = 0 # Starting point of potential difference (end of last match, or start of string)
       operations = []
@@ -37,13 +42,14 @@ module HTMLDiff
       matches = matching_blocks
       # an empty match at the end forces the loop below to handle the unmatched tails
       # I'm sure it can be done more gracefully, but not at 23:52
-      matches << Match.new(@old_words.length, @new_words.length, 0)
+      matches << HTMLDiff::Match.new(@old_words.length, @new_words.length, 0)
 
       matches.each_with_index do |match, i|
 
-        # We have a problem with single space matches found in between words which are otherwise different.
-        # If we find a match that is just a single space, then we should ignore it so that the
-        # changes before and after it merge together.
+        # We have a problem with single space matches found in between words
+        # which are otherwise different. If we find a match that is just a
+        # single space, then we should ignore it so that the # changes before
+        # and after it merge together.
         old_text = @old_words[match.start_in_old...match.end_in_old].join
         new_text = @new_words[match.start_in_new...match.end_in_new].join
         if old_text == ' ' && old_text == new_text
@@ -53,7 +59,8 @@ module HTMLDiff
         match_starts_at_current_position_in_old = (position_in_old == match.start_in_old)
         match_starts_at_current_position_in_new = (position_in_new == match.start_in_new)
 
-        # Based on where the match starts and ends, work out what the preceding non-matching bit represents.
+        # Based on where the match starts and ends, work out what the preceding
+        # non-matching bit represents.
         action_upto_match_positions =
           case [match_starts_at_current_position_in_old, match_starts_at_current_position_in_new]
             when [false, false]
@@ -67,7 +74,8 @@ module HTMLDiff
               :none
           end
 
-        # This operation will add the <ins> or <del> tag, plus the content that has changed.
+        # This operation will add the <ins> or <del> tag, plus the content
+        # that has changed.
         if action_upto_match_positions != :none
           operation_upto_match_positions =
             Operation.new(action_upto_match_positions,
@@ -90,17 +98,19 @@ module HTMLDiff
       operations
     end
 
-    # The returned array is of matches in the order in which they appear in the strings. Each array item
-    # is an instance of Match, which contains the start index of the match in @old_words, the start index
-    # in @new_words, and the length in number of words.
+    # The returned array is of matches in the order in which they appear in the
+    # strings. Each array item is an instance of Match, which contains the
+    # start index of the match in @old_words, the start index in @new_words,
+    # and the length in number of words.
     def matching_blocks
       matching_blocks = []
       recursively_find_matching_blocks(0, @old_words.size, 0, @new_words.size, matching_blocks)
       matching_blocks
     end
 
-    # The first time this is called, it checks the whole of the two strings. It then recursively checks the
-    # gaps that are left either side of the longest match, until there are no smaller matches.
+    # The first time this is called, it checks the whole of the two strings.
+    # It then recursively checks the gaps that are left either side of the
+    # longest match, until there are no smaller matches.
     def recursively_find_matching_blocks(start_in_old, end_in_old, start_in_new, end_in_new, matching_blocks)
       match = find_match(start_in_old, end_in_old, start_in_new, end_in_new) # Longest match in the given range.
       if match
@@ -117,32 +127,36 @@ module HTMLDiff
       end
     end
 
-    # This will find the longest matching set of words when comparing the given ranges in @old_words and
-    # @new_words.
+    # This will find the longest matching set of words when comparing the given
+    # ranges in @old_words and @new_words.
     def find_match(start_in_old, end_in_old, start_in_new, end_in_new)
 
       start_of_best_match_in_old = start_in_old
       start_of_best_match_in_new = start_in_new
       best_match_size = 0
 
-      # A match is a string of words which is in both @old_words and @new words at a certain position.
-      # Keep track of the length of matches starting at each index position in @new_words.
-      # e.g. if the match length at index 4 = 3, then that means that the fourth word in @new_words is the
+      # A match is a string of words which is in both @old_words and @new words
+      # at a certain position. Keep track of the length of matches starting at
+      # each index position in @new_words. # e.g. if the match length at index
+      # 4 = 3, then that means that the fourth word in @new_words is the
       # end of a 3-word-long match.
       #
       # If there are two matches of the same size, it'll get the first one.
       match_length_at = Hash.new { |h, index| h[index] = 0 }
 
-      # Start at the beginning position in @old_words and move forwards one word at a time
+      # Start at the beginning position in @old_words and move forwards one
+      # word at a time
       start_in_old.upto(end_in_old - 1) do |index_in_old|
 
-        # This will store the match lengths for all words so far up to the current word.
-        # Just looking at this word, the lengths will all be 1, so we check the match length
-        # for the preceding word in @new_words. If that is non-zero, it means that a previous match
-        # happened up to this point.
+        # This will store the match lengths for all words so far up to the
+        # current word. Just looking at this word, the lengths will all be 1,
+        # so we check the match length for the preceding word in @new_words.
+        # If that is non-zero, it means that a previous match happened up to
+        # this point.
         #
-        # If the current word is a continuation of a match, then we will increment the match length and store
-        # it for the current index position in @new_words.
+        # If the current word is a continuation of a match, then we will
+        # increment the match length and store it for the current index
+        # position in @new_words.
         new_match_length_at = Hash.new { |h, index| h[index] = 0 }
 
         # Take the word which is at this position in @old_words,
@@ -169,7 +183,7 @@ module HTMLDiff
         match_length_at = new_match_length_at
       end
 
-      (best_match_size != 0 ? Match.new(start_of_best_match_in_old, start_of_best_match_in_new, best_match_size) : nil)
+      (best_match_size != 0 ? HTMLDiff::Match.new(start_of_best_match_in_old, start_of_best_match_in_new, best_match_size) : nil)
     end
 
     def add_matching_words_left(match_in_old, match_in_new, match_size, start_in_old, start_in_new)
@@ -199,6 +213,8 @@ module HTMLDiff
       self.send operation.action, operation
     end
 
+
+    # @param [HTMLDiff::Operation] operation
     def replace(operation)
       # Special case: a tag has been altered so that an attribute has been added e.g.
       # <p> becomes <p style="margin: 2px"> due to an editor button press. For this, we just
@@ -274,17 +290,19 @@ module HTMLDiff
       end
     end
 
-    # This method encloses words within a specified tag (ins or del), and adds this into @content,
-    # with a twist: if there are words contain tags, it actually creates multiple ins or del,
-    # so that they don't include any ins or del. This handles cases like
+    # This method encloses words within a specified tag (ins or del), and adds
+    # this into @content, with a twist: if there are words contain tags, it
+    # actually creates multiple ins or del, so that they don't include any ins
+    # or del. This handles cases like
     # old: '<p>a</p>'
     # new: '<p>ab</p><p>c</p>'
     # diff result: '<p>a<ins>b</ins></p><p><ins>c</ins></p>'
-    # this still doesn't guarantee valid HTML (hint: think about diffing a text containing ins or
-    # del tags), but handles correctly more cases than the earlier version.
+    # this still doesn't guarantee valid HTML (hint: think about diffing a text
+    # containing ins or del tags), but handles correctly more cases than the
+    # earlier version.
     #
-    # P.S.: Spare a thought for people who write HTML browsers. They live in this... every day.
-
+    # P.S.: Spare a thought for people who write HTML browsers. They live in
+    # this... every day.
     def insert_tag(tagname, cssclass, words)
       wrapped = false
 
