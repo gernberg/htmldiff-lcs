@@ -6,8 +6,8 @@ module HTMLDiff
     attr_reader :operations, :content
 
     def initialize(old_version, new_version, options = {})
-      @old_version = old_version
-      @new_version = new_version
+      @old_words = ListOfWords.new old_version
+      @new_words = ListOfWords.new new_version
       @options = options
       @content = []
       # This keeps count of any HTML tags that have attributes changed, which
@@ -16,7 +16,6 @@ module HTMLDiff
     end
 
     def build
-      split_inputs_to_words
       index_new_words
       define_operations
       perform_operations
@@ -25,13 +24,6 @@ module HTMLDiff
 
     def perform_operations
       operations.each { |op| perform_operation(op) }
-    end
-
-    def split_inputs_to_words
-      @old_words = ListOfWords.new @old_version
-      @new_words = ListOfWords.new @new_version
-      # @old_words = convert_html_to_list_of_words(explode(@old_version))
-      # @new_words = convert_html_to_list_of_words(explode(@new_version))
     end
 
     # This leaves us with { first => [1], 'second' => [2, 3] } to tell us where
