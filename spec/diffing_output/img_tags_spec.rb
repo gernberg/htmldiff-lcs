@@ -26,16 +26,16 @@ describe 'HTMLDiff' do
 
       it 'wraps img tags inserted with other tags and new lines' do
         oldv = 'text'
-        newv = %|text<p>\r\n<img src="something" />\r\n</p>|
+        newv = %(text<p>\r\n<img src="something" />\r\n</p>)
         diff = HTMLDiff.diff(oldv, newv)
-        expect(diff).to eq(%|text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something" />\r\n</ins></p></ins>|)
+        expect(diff).to eq(%(text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something" />\r\n</ins></p></ins>))
       end
 
       it 'wraps badly terminated img tags inserted with other tags and new lines' do
         oldv = 'text'
-        newv = %|text<p>\r\n<img src="something">\r\n</p>|
+        newv = %(text<p>\r\n<img src="something">\r\n</p>)
         diff = HTMLDiff.diff(oldv, newv)
-        expect(diff).to eq(%|text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something">\r\n</ins></p></ins>|)
+        expect(diff).to eq(%(text<ins class="diffins"><p><ins class="diffins">\r\n<img src="something">\r\n</ins></p></ins>))
       end
 
       it 'supports img tags deletion' do

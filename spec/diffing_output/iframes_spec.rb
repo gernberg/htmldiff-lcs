@@ -2,7 +2,6 @@ require File.dirname(__FILE__) + '/../spec_helper'
 
 describe 'HTMLDiff' do
   describe 'diff' do
-
     describe 'iframes' do
       it 'wraps iframe inserts' do
         oldv = 'a b c'
@@ -28,7 +27,6 @@ describe 'HTMLDiff' do
       </ins><ins class="diffins"><iframe src="url"></iframe></ins><ins class="diffins">
       </ins></div><ins class="diffins">
   </ins></ins>')
-
       end
     end
   end

@@ -6,7 +6,9 @@ module HTMLDiff
     attr_reader :operations, :content
 
     def initialize(old_version, new_version, options = {})
-      @old_version, @new_version, @options = old_version, new_version, options
+      @old_version = old_version
+      @new_version = new_version
+      @options = options
       @content = []
       # This keeps count of any HTML tags that have attributes changed, which
       # makes only one of them show up.
@@ -45,7 +47,9 @@ module HTMLDiff
     # between the matched portions as insert, delete or replace by creating an
     # instance of Operation for each one.
     def define_operations
-      @position_in_old = @position_in_new = 0 # Starting point of potential difference (end of last match, or start of string)
+      # Starting point of potential difference (end of last match, or start
+      # of string)
+      @position_in_old = @position_in_new = 0
       @operations = []
 
       matching_blocks.each do |match|
@@ -53,17 +57,15 @@ module HTMLDiff
       end
     end
 
+    # @param [HTMLDiff::Match] match
     def create_operatiion_from(match)
-
       # We have a problem with single space matches found in between words
       # which are otherwise different. If we find a match that is just a
       # single space, then we should ignore it so that the # changes before
       # and after it merge together.
       old_text = @old_words[match.start_in_old...match.end_in_old].join
       new_text = @new_words[match.start_in_new...match.end_in_new].join
-      if old_text == ' ' && old_text == new_text
-        return
-      end
+      return if old_text == ' ' && old_text == new_text
 
       match_starts_at_current_position_in_old = (@position_in_old == match.start_in_old)
       match_starts_at_current_position_in_new = (@position_in_new == match.start_in_new)
@@ -71,16 +73,17 @@ module HTMLDiff
       # Based on where the match starts and ends, work out what the preceding
       # non-matching bit represents.
       action_upto_match_positions =
-        case [match_starts_at_current_position_in_old, match_starts_at_current_position_in_new]
-          when [false, false]
-            :replace
-          when [true, false]
-            :insert
-          when [false, true]
-            :delete
-          else
-            # this happens if the first few words are same in both versions
-            :none
+        case [match_starts_at_current_position_in_old,
+              match_starts_at_current_position_in_new]
+        when [false, false]
+          :replace
+        when [true, false]
+          :insert
+        when [false, true]
+          :delete
+        else
+          # this happens if the first few words are same in both versions
+          :none
         end
 
       # This operation will add the <ins> or <del> tag, plus the content
@@ -115,30 +118,41 @@ module HTMLDiff
       # an empty match at the end forces the loop to make operations to handle
       # the unmatched tails I'm sure it can be done more gracefully, but not at
       # 23:52
-      matching_blocks << HTMLDiff::Match.new(@old_words.length, @new_words.length, 0)
+      matching_blocks << HTMLDiff::Match.new(@old_words.length,
+                                             @new_words.length, 0)
     end
 
     # The first time this is called, it checks the whole of the two strings.
     # It then recursively checks the gaps that are left either side of the
     # longest match, until there are no smaller matches.
-    def recursively_find_matching_blocks(start_in_old, end_in_old, start_in_new, end_in_new, matching_blocks)
-      match = find_match(start_in_old, end_in_old, start_in_new, end_in_new) # Longest match in the given range.
-      if match
-        if start_in_old < match.start_in_old and start_in_new < match.start_in_new # The match is not at the start of either range
-          # Search the gap before the longest match and add any smaller matches from there.
-          recursively_find_matching_blocks(start_in_old, match.start_in_old, start_in_new, match.start_in_new, matching_blocks)
-        end
-        # Add the longest match
-        matching_blocks << match
-        if match.end_in_old < end_in_old and match.end_in_new < end_in_new # The match is not at the end of either range.
-          # Search the gap after the longest match and add any smaller matches from there
-          recursively_find_matching_blocks(match.end_in_old, end_in_old, match.end_in_new, end_in_new, matching_blocks)
-        end
+    def recursively_find_matching_blocks(start_in_old, end_in_old, start_in_new,
+                                         end_in_new, matching_blocks)
+      # Longest match in the given range.
+      match = find_match(start_in_old, end_in_old, start_in_new, end_in_new)
+      return unless  match
+      # The match is not at the start of either range
+      if start_in_old < match.start_in_old && start_in_new < match.start_in_new
+        # Search the gap before the longest match and add any smaller matches
+        # from there.
+        recursively_find_matching_blocks(start_in_old, match.start_in_old,
+                                         start_in_new, match.start_in_new,
+                                         matching_blocks)
+      end
+      # Add the longest match
+      matching_blocks << match
+      # The match is not at the end of either range.
+      if match.end_in_old < end_in_old && match.end_in_new < end_in_new
+        # Search the gap after the longest match and add any smaller matches
+        # from there
+        recursively_find_matching_blocks(match.end_in_old, end_in_old,
+                                         match.end_in_new, end_in_new,
+                                         matching_blocks)
       end
     end
 
     # This will find the longest matching set of words when comparing the given
     # ranges in @old_words and @new_words.
+    # @return [HTMLDiff::Match]
     def find_match(start_in_old, end_in_old, start_in_new, end_in_new)
       start_of_best_match_in_old = start_in_old
       start_of_best_match_in_new = start_in_new
@@ -156,7 +170,6 @@ module HTMLDiff
       # Start at the beginning position in @old_words and move forwards one
       # word at a time
       start_in_old.upto(end_in_old - 1) do |index_in_old|
-
         # This will store the match lengths for all words so far up to the
         # current word. Just looking at this word, the lengths will all be 1,
         # so we check the match length for the preceding word in @new_words.
@@ -171,11 +184,14 @@ module HTMLDiff
         # Take the word which is at this position in @old_words,
         # then for each position it occurs in within @new_words...
         @word_indices[@old_words[index_in_old]].each do |index_in_new|
-          next if index_in_new < start_in_new # Skip if we've moved past this position in @new_words already.
-          break if index_in_new >= end_in_new # Stop at the end position we are checking up to in @new_words
+          # Skip if we've moved past this position in @new_words already.
+          next if index_in_new < start_in_new
+          # Stop at the end position we are checking up to in @new_words
+          break if index_in_new >= end_in_new
 
-          # Add 1 to the length of the match we have for the previous word position in @new_words.
-          # i.e. we are moving along @old words, ticking off letters in @new_words as we go.
+          # Add 1 to the length of the match we have for the previous word
+          # position in @new_words. i.e. we are moving along @old words,
+          # ticking off letters in @new_words as we go.
           new_match_length = match_length_at[index_in_new - 1] + 1 # Will be zero if the previous word in @new_words has not been marked as a match
           new_match_length_at[index_in_new] = new_match_length
 
@@ -200,10 +216,11 @@ module HTMLDiff
       end
     end
 
-    def add_matching_words_left(match_in_old, match_in_new, match_size, start_in_old, start_in_new)
-      while match_in_old > start_in_old and
-        match_in_new > start_in_new and
-        @old_words[match_in_old - 1] == @new_words[match_in_new - 1]
+    def add_matching_words_left(match_in_old, match_in_new, match_size,
+                                start_in_old, start_in_new)
+      while match_in_old > start_in_old &&
+            match_in_new > start_in_new &&
+            @old_words[match_in_old - 1] == @new_words[match_in_new - 1]
         match_in_old -= 1
         match_in_new -= 1
         match_size += 1
@@ -211,10 +228,11 @@ module HTMLDiff
       [match_in_old, match_in_new, match_size]
     end
 
-    def add_matching_words_right(match_in_old, match_in_new, match_size, end_in_old, end_in_new)
-      while match_in_old + match_size < end_in_old and
-        match_in_new + match_size < end_in_new and
-        @old_words[match_in_old + match_size] == @new_words[match_in_new + match_size]
+    def add_matching_words_right(match_in_old, match_in_new, match_size,
+                                 end_in_old, end_in_new)
+      while match_in_old + match_size < end_in_old &&
+            match_in_new + match_size < end_in_new &&
+            @old_words[match_in_old + match_size] == @new_words[match_in_new + match_size]
         match_size += 1
       end
       [match_in_old, match_in_new, match_size]
@@ -224,9 +242,8 @@ module HTMLDiff
 
     def perform_operation(operation)
       @operation = operation
-      self.send operation.action, operation
+      send operation.action, operation
     end
-
 
     # @param [HTMLDiff::Operation] operation
     def replace(operation)
@@ -260,11 +277,11 @@ module HTMLDiff
     end
 
     def opening_tag?(item)
-      item =~ /[\s]*<[^\/]{1}[^>]*>\s*$/
+      item =~ %r{[\s]*<[^\/]{1}[^>]*>\s*$}
     end
 
     def closing_tag?(item)
-      item =~ %r!^\s*</[^>]+>\s*$!
+      item =~ %r{^\s*</[^>]+>\s*$}
     end
 
     def standalone_tag?(item)
@@ -285,17 +302,17 @@ module HTMLDiff
     end
 
     def tag?(item)
-      opening_tag?(item) or closing_tag?(item) or standalone_tag?(item)
+      opening_tag?(item) || closing_tag?(item) || standalone_tag?(item)
     end
 
     def iframe_tag?(item)
-      (item[0..7].downcase =~ /^<\/?iframe ?/)
+      (item[0..7].downcase =~ %r{^<\/?iframe ?})
     end
 
     def extract_consecutive_words(words, &condition)
       index_of_first_tag = nil
       words.each_with_index do |word, i|
-        if !condition.call(word)
+        unless condition.call(word)
           index_of_first_tag = i
           break
         end
@@ -324,7 +341,6 @@ module HTMLDiff
       wrapped = false
 
       loop do
-
         break if words.empty?
 
         if standalone_tag?(words.first)
@@ -355,9 +371,7 @@ module HTMLDiff
         end
       end
 
-      if wrapped
-        @content << wrap_end(tagname)
-      end
+      @content << wrap_end(tagname) if wrapped
     end
 
     def wrap_text(text, tagname, cssclass)
@@ -368,11 +382,11 @@ module HTMLDiff
     end
 
     def wrap_start(tagname, cssclass)
-      %|<#{tagname} class="#{cssclass}">|
+      %(<#{tagname} class="#{cssclass}">)
     end
 
     def wrap_end(tagname)
-      %|</#{tagname}>|
+      %(</#{tagname}>)
     end
 
     def explode(sequence)
@@ -404,48 +418,48 @@ module HTMLDiff
         char = character_array.first
 
         case mode
-          when :tag
-            if end_of_tag? char
-              current_word << (use_brackets ? ']' : '>')
-              words << current_word
-              current_word = ''
-              if whitespace? char
-                mode = :whitespace
-              else
-                mode = :char
-              end
-            else
-              current_word << char
-            end
-          when :char
-            if start_of_tag? char
-              words << current_word unless current_word.empty?
-              current_word = (use_brackets ? '[' : '<')
-              mode = :tag
-            elsif whitespace? char
-              words << current_word unless current_word.empty?
-              current_word = char
+        when :tag
+          if end_of_tag? char
+            current_word << (use_brackets ? ']' : '>')
+            words << current_word
+            current_word = ''
+            if whitespace? char
               mode = :whitespace
-            elsif char? char
-              current_word << char
             else
-              words << current_word unless current_word.empty?
-              current_word = char
-            end
-          when :whitespace
-            if start_of_tag? char
-              words << current_word unless current_word.empty?
-              current_word = (use_brackets ? '[' : '<')
-              mode = :tag
-            elsif whitespace? char
-              current_word << char
-            else
-              words << current_word unless current_word.empty?
-              current_word = char
               mode = :char
             end
           else
-            raise "Unknown mode #{mode.inspect}"
+            current_word << char
+          end
+        when :char
+          if start_of_tag? char
+            words << current_word unless current_word.empty?
+            current_word = (use_brackets ? '[' : '<')
+            mode = :tag
+          elsif whitespace? char
+            words << current_word unless current_word.empty?
+            current_word = char
+            mode = :whitespace
+          elsif char? char
+            current_word << char
+          else
+            words << current_word unless current_word.empty?
+            current_word = char
+          end
+        when :whitespace
+          if start_of_tag? char
+            words << current_word unless current_word.empty?
+            current_word = (use_brackets ? '[' : '<')
+            mode = :tag
+          elsif whitespace? char
+            current_word << char
+          else
+            words << current_word unless current_word.empty?
+            current_word = char
+            mode = :char
+          end
+        else
+          fail "Unknown mode #{mode.inspect}"
         end
 
         character_array.shift # Remove this character now we are done
@@ -454,12 +468,14 @@ module HTMLDiff
       words
     end
 
-    # This is supposed to catch string with a single unclosed tag, but multi-line things seem to be breaking it.
+    # This is supposed to catch string with a single unclosed tag, but
+    # multi-line things seem to be breaking it.
     def unclosed_tag_regex
-      /<(\w+)[^>]*(?<!\/)>((?!<\/\1>).)*$/
+      %r{<(\w+)[^>]*(?<!\/)>((?!<\/\1>).)*$}
     end
 
-    # Tells us if we have an unmatched HTML tag e.g. <p> has changed to <p style="margin-left: 20px;">
+    # Tells us if we have an unmatched HTML tag e.g. <p> has changed to
+    # <p style="margin-left: 20px;">
     # Only works with single tags, but its unlikely to be a problem.
     def contains_unclosed_tag?(string_to_check)
       bits_of_string = convert_html_to_list_of_words(explode(string_to_check))

@@ -47,16 +47,6 @@ describe 'HTMLDiff' do
         expect(diff).to eq('<p><del class="diffmod">Nothing!</del><ins class="diffmod"> Test Paragraph </ins></p>weee<ins class="diffins"><p><ins class="diffins">More Stuff</ins></p></ins>')
       end
 
-      #
-      #describe 'replacing tags' do
-      #  it 'highlights the tags as well as their content' do
-      #    doc_a = %|text <p>Nothing!</p> text|
-      #    doc_b = %|text <h1>Nothing!</h1> text|
-      #    diff = HTMLDiff.diff(doc_a, doc_b)
-      #    diff.should == %|text <del class="diffmod"><p>Nothing!</p></del><ins class="diffmod"><h1>Nothing!</h1></ins> text|
-      #  end
-      #end
-
       describe 'changing the attributes of tags' do
         it 'ignores a tag with new attributes' do
           doc_a = 'text <p>Nothing!</p> text'
