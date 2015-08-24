@@ -28,15 +28,17 @@ module HTMLDiff
     end
 
     def split_inputs_to_words
-      @old_words = convert_html_to_list_of_words(explode(@old_version))
-      @new_words = convert_html_to_list_of_words(explode(@new_version))
+      @old_words = ListOfWords.new @old_version
+      @new_words = ListOfWords.new @new_version
+      # @old_words = convert_html_to_list_of_words(explode(@old_version))
+      # @new_words = convert_html_to_list_of_words(explode(@new_version))
     end
 
     # This leaves us with { first => [1], 'second' => [2, 3] } to tell us where
     # in @new_words each word appears.
     def index_new_words
       @word_indices = Hash.new { |h, word| h[word] = [] }
-      @new_words.each_with_index { |word, i| @word_indices[word] << i }
+      @new_words.each_with_index { |word, i| @word_indices[word.to_s] << i }
     end
 
     # This gets an array of the sections of the two strings that match, then
@@ -113,13 +115,13 @@ module HTMLDiff
     # and the length in number of words.
     def matching_blocks
       matching_blocks = []
-      recursively_find_matching_blocks(0, @old_words.size, 0,
-                                       @new_words.size, matching_blocks)
+      recursively_find_matching_blocks(0, @old_words.count, 0,
+                                       @new_words.count, matching_blocks)
       # an empty match at the end forces the loop to make operations to handle
       # the unmatched tails I'm sure it can be done more gracefully, but not at
       # 23:52
-      matching_blocks << HTMLDiff::Match.new(@old_words.length,
-                                             @new_words.length, 0)
+      matching_blocks << HTMLDiff::Match.new(@old_words.count,
+                                             @new_words.count, 0)
     end
 
     # The first time this is called, it checks the whole of the two strings.
@@ -183,7 +185,7 @@ module HTMLDiff
 
         # Take the word which is at this position in @old_words,
         # then for each position it occurs in within @new_words...
-        @word_indices[@old_words[index_in_old]].each do |index_in_new|
+        @word_indices[@old_words[index_in_old].to_s].each do |index_in_new|
           # Skip if we've moved past this position in @new_words already.
           next if index_in_new < start_in_new
           # Stop at the end position we are checking up to in @new_words
@@ -249,7 +251,7 @@ module HTMLDiff
     def replace(operation)
       # Special case: a tag has been altered so that an attribute has been
       # added e.g. <p> becomes <p style="margin: 2px"> due to an editor button
-      # press. For this, we just Show the new version, otherwise it gets messy
+      # press. For this, we just show the new version, otherwise it gets messy
       # trying to find the closing tag.
       old_text = @old_words[operation.start_in_old...operation.end_in_old].join
       new_text = @new_words[operation.start_in_new...operation.end_in_new].join
@@ -273,19 +275,7 @@ module HTMLDiff
     def equal(operation)
       # no tags to insert, simply copy the matching words from one of the
       # versions
-      @content += @new_words[operation.start_in_new...operation.end_in_new]
-    end
-
-    def opening_tag?(item)
-      item =~ %r{[\s]*<[^\/]{1}[^>]*>\s*$}
-    end
-
-    def closing_tag?(item)
-      item =~ %r{^\s*</[^>]+>\s*$}
-    end
-
-    def standalone_tag?(item)
-      item.downcase =~ /<(img|hr|br)/
+      @content += @new_words[operation.start_in_new...operation.end_in_new].to_a
     end
 
     # Ignores any attributes and tells us if the tag is the same e.g. <p> and
@@ -299,29 +289,6 @@ module HTMLDiff
       second_tagname = second_tagname[1] if second_tagname
 
       first_tagname && (first_tagname == second_tagname)
-    end
-
-    def tag?(item)
-      opening_tag?(item) || closing_tag?(item) || standalone_tag?(item)
-    end
-
-    def iframe_tag?(item)
-      (item[0..7].downcase =~ %r{^<\/?iframe ?})
-    end
-
-    def extract_consecutive_words(words, &condition)
-      index_of_first_tag = nil
-      words.each_with_index do |word, i|
-        unless condition.call(word)
-          index_of_first_tag = i
-          break
-        end
-      end
-      if index_of_first_tag
-        return words.slice!(0...index_of_first_tag)
-      else
-        return words.slice!(0..words.length)
-      end
     end
 
     # This method encloses words within a specified tag (ins or del), and adds
@@ -343,13 +310,13 @@ module HTMLDiff
       loop do
         break if words.empty?
 
-        if standalone_tag?(words.first)
-          img_tag = extract_consecutive_words(words) { |word| standalone_tag?(word) }
+        if words.first.standalone_tag?
+          img_tag = words.extract_consecutive_words! { |word| word.standalone_tag? }
           @content << wrap_text(img_tag, tagname, cssclass)
-        elsif iframe_tag?(words.first)
-          img_tag = extract_consecutive_words(words) { |word| iframe_tag?(word) }
+        elsif words.first.iframe_tag?
+          img_tag = words.extract_consecutive_words! { |word| word.iframe_tag? }
           @content << wrap_text(img_tag, tagname, cssclass)
-        elsif tag?(words.first)
+        elsif words.first.tag?
 
           # If this chunk of text contains orphaned tags, then wrapping it will
           # cause weirdness. This would be the case if we have e.g. a style
@@ -358,13 +325,13 @@ module HTMLDiff
           #
           # If we do decide to wrap the whole
 
-          if !wrapped && !contains_unclosed_tag?(words.join)
+          if !wrapped && !words.contains_unclosed_tag?
             @content << wrap_start(tagname, cssclass)
             wrapped = true
           end
-          @content += extract_consecutive_words(words) { |word| tag?(word) && !standalone_tag?(word) && !iframe_tag?(word) }
+          @content += words.extract_consecutive_words! { |word| word.tag? && !word.standalone_tag? && !word.iframe_tag? }
         else
-          non_tags = extract_consecutive_words(words) { |word| (standalone_tag?(word)) || (!tag?(word)) }
+          non_tags = words.extract_consecutive_words! { |word| (word.standalone_tag? || !word.tag?) }
           @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.join.empty?
 
           break if words.empty?
@@ -387,116 +354,6 @@ module HTMLDiff
 
     def wrap_end(tagname)
       %(</#{tagname}>)
-    end
-
-    def explode(sequence)
-      sequence.is_a?(String) ? sequence.chars : sequence
-    end
-
-    def end_of_tag?(char)
-      char == '>'
-    end
-
-    def start_of_tag?(char)
-      char == '<'
-    end
-
-    def whitespace?(char)
-      char =~ /\s/
-    end
-
-    def char?(char)
-      char =~ /[\w\#@]+/i
-    end
-
-    def convert_html_to_list_of_words(character_array, use_brackets = false)
-      mode = :char
-      current_word = ''
-      words = []
-
-      while character_array.length > 0
-        char = character_array.first
-
-        case mode
-        when :tag
-          if end_of_tag? char
-            current_word << (use_brackets ? ']' : '>')
-            words << current_word
-            current_word = ''
-            if whitespace? char
-              mode = :whitespace
-            else
-              mode = :char
-            end
-          else
-            current_word << char
-          end
-        when :char
-          if start_of_tag? char
-            words << current_word unless current_word.empty?
-            current_word = (use_brackets ? '[' : '<')
-            mode = :tag
-          elsif whitespace? char
-            words << current_word unless current_word.empty?
-            current_word = char
-            mode = :whitespace
-          elsif char? char
-            current_word << char
-          else
-            words << current_word unless current_word.empty?
-            current_word = char
-          end
-        when :whitespace
-          if start_of_tag? char
-            words << current_word unless current_word.empty?
-            current_word = (use_brackets ? '[' : '<')
-            mode = :tag
-          elsif whitespace? char
-            current_word << char
-          else
-            words << current_word unless current_word.empty?
-            current_word = char
-            mode = :char
-          end
-        else
-          fail "Unknown mode #{mode.inspect}"
-        end
-
-        character_array.shift # Remove this character now we are done
-      end
-      words << current_word unless current_word.empty?
-      words
-    end
-
-    # This is supposed to catch string with a single unclosed tag, but
-    # multi-line things seem to be breaking it.
-    def unclosed_tag_regex
-      %r{<(\w+)[^>]*(?<!\/)>((?!<\/\1>).)*$}
-    end
-
-    # Tells us if we have an unmatched HTML tag e.g. <p> has changed to
-    # <p style="margin-left: 20px;">
-    # Only works with single tags, but its unlikely to be a problem.
-    def contains_unclosed_tag?(string_to_check)
-      bits_of_string = convert_html_to_list_of_words(explode(string_to_check))
-      tags = 0
-
-      while bits_of_string.size > 0
-        current_bit = bits_of_string.shift
-        if standalone_tag? current_bit
-          next
-        elsif opening_tag? current_bit
-          tags += 1
-        elsif closing_tag? current_bit
-          tags -= 1
-        end
-      end
-
-      tags != 0
-    end
-
-    def unclosed_tag(string_to_check)
-      string_to_check.scan(unclosed_tag_regex).first.first
     end
   end
 end
