@@ -53,12 +53,12 @@ module HTMLDiff
       @operations = []
 
       matching_blocks.each do |match|
-        create_operatiion_from(match)
+        create_operation_from(match)
       end
     end
 
     # @param [HTMLDiff::Match] match
-    def create_operatiion_from(match)
+    def create_operation_from(match)
       # We have a problem with single space matches found in between words
       # which are otherwise different. If we find a match that is just a
       # single space, then we should ignore it so that the # changes before
