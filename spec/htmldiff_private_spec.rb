@@ -8,8 +8,6 @@ describe 'internal methods' do
   let(:the_match) { double(HTMLDiff::Match) }
   let(:the_builder) { HTMLDiff::DiffBuilder.new('', '') }
 
-
-
   describe 'same_tag?' do
     it 'returns true for identical simple tags' do
       expect(the_builder.same_tag?('<p>', '<p>')).to be_true

@@ -47,12 +47,14 @@ module HTMLDiff
 
     # @param operation [HTMLDiff::Operation]
     def insert(operation, tagclass = 'diffins')
-      insert_tag('ins', tagclass, @new_words[operation.start_in_new...operation.end_in_new])
+      words = @new_words[operation.start_in_new...operation.end_in_new]
+      insert_tag('ins', tagclass, words)
     end
 
     # @param operation [HTMLDiff::Operation]
     def delete(operation, tagclass = 'diffdel')
-      insert_tag('del', tagclass, @old_words[operation.start_in_old...operation.end_in_old])
+      words = @old_words[operation.start_in_old...operation.end_in_old]
+      insert_tag('del', tagclass, words)
     end
 
     # @param operation [HTMLDiff::Operation]
@@ -95,7 +97,9 @@ module HTMLDiff
         break if words.empty?
 
         if words.first.standalone_tag?
-          img_tag = words.extract_consecutive_words! { |word| word.standalone_tag? }
+          img_tag = words.extract_consecutive_words! do |word|
+            word.standalone_tag?
+          end
           @content << wrap_text(img_tag, tagname, cssclass)
         elsif words.first.iframe_tag?
           img_tag = words.extract_consecutive_words! { |word| word.iframe_tag? }
@@ -113,10 +117,16 @@ module HTMLDiff
             @content << wrap_start(tagname, cssclass)
             wrapped = true
           end
-          @content += words.extract_consecutive_words! { |word| word.tag? && !word.standalone_tag? && !word.iframe_tag? }
+          @content += words.extract_consecutive_words! do |word|
+            word.tag? && !word.standalone_tag? && !word.iframe_tag?
+          end
         else
-          non_tags = words.extract_consecutive_words! { |word| (word.standalone_tag? || !word.tag?) }
-          @content << wrap_text(non_tags.join, tagname, cssclass) unless non_tags.join.empty?
+          non_tags = words.extract_consecutive_words! do |word|
+            (word.standalone_tag? || !word.tag?)
+          end
+          unless non_tags.join.empty?
+            @content << wrap_text(non_tags.join, tagname, cssclass)
+          end
 
           break if words.empty?
         end

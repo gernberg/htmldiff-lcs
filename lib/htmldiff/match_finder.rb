@@ -143,11 +143,11 @@ module HTMLDiff
         match_length_at = new_match_length_at
       end
 
-      if best_match_size != 0
-        HTMLDiff::Match.new(start_of_best_match_in_old,
-                            start_of_best_match_in_new,
-                            best_match_size)
-      end
+      return if best_match_size == 0
+
+      HTMLDiff::Match.new(start_of_best_match_in_old,
+                          start_of_best_match_in_new,
+                          best_match_size)
     end
 
     # @param [HTMLDiff::Match] match
@@ -168,15 +168,15 @@ module HTMLDiff
       action_upto_match_positions =
         case [match_starts_at_current_position_in_old,
               match_starts_at_current_position_in_new]
-          when [false, false]
-            :replace
-          when [true, false]
-            :insert
-          when [false, true]
-            :delete
-          else
-            # this happens if the first few words are same in both versions
-            :none
+        when [false, false]
+          :replace
+        when [true, false]
+          :insert
+        when [false, true]
+          :delete
+        else
+          # this happens if the first few words are same in both versions
+          :none
         end
 
       # This operation will add the <ins> or <del> tag, plus the content

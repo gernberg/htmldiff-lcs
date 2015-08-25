@@ -1,4 +1,10 @@
 module HTMLDiff
+  # This class is responsible for representing one word in one of the HTML
+  # strings. Once the HTML has been transformed into words by the ListOfWords
+  # class, the diff algorithm then looks for what has changed. The idea is that
+  # rather than the standard diff which looks character by character, this will
+  # work around the HTML tags so that the output looks only at the text inside
+  # them.
   class Word
     def initialize(word = '')
       @word = word
