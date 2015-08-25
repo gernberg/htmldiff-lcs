@@ -4,7 +4,8 @@ describe HTMLDiff::ListOfWords do
   describe 'breaking tags up correctly' do
     it 'separates tags' do
       input = '<p>input</p>'
-      expect(HTMLDiff::ListOfWords.new(input).to_a.map(&:to_s)).to eq %w(<p> input </p>)
+      words_as_array = HTMLDiff::ListOfWords.new(input).to_a.map(&:to_s)
+      expect(words_as_array).to eq %w(<p> input </p>)
     end
   end
 
