@@ -199,7 +199,5 @@ module HTMLDiff
       @position_in_old = match.end_in_old
       @position_in_new = match.end_in_new
     end
-
-
   end
 end

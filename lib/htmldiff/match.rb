@@ -8,4 +8,10 @@ module HTMLDiff
       start_in_new + size
     end
   end
+
+  class Match
+    # @!method start_in_old
+    # @!method start_in_new
+    # @!method size
+  end
 end

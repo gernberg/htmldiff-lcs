@@ -25,14 +25,11 @@ module HTMLDiff
       operations.each { |op| perform_operation(op) }
     end
 
-    VALID_METHODS = [:replace, :insert, :delete, :equal]
-
     def perform_operation(operation)
-      @operation = operation
       send operation.action, operation
     end
 
-    # @param [HTMLDiff::Operation] operation
+    # @param operation [HTMLDiff::Operation]
     def replace(operation)
       # Special case: a tag has been altered so that an attribute has been
       # added e.g. <p> becomes <p style="margin: 2px"> due to an editor button
@@ -53,10 +50,12 @@ module HTMLDiff
       insert_tag('ins', tagclass, @new_words[operation.start_in_new...operation.end_in_new])
     end
 
+    # @param operation [HTMLDiff::Operation]
     def delete(operation, tagclass = 'diffdel')
       insert_tag('del', tagclass, @old_words[operation.start_in_old...operation.end_in_old])
     end
 
+    # @param operation [HTMLDiff::Operation]
     def equal(operation)
       # no tags to insert, simply copy the matching words from one of the
       # versions
@@ -66,7 +65,7 @@ module HTMLDiff
     # Ignores any attributes and tells us if the tag is the same e.g. <p> and
     # <p style="margin: 2px;">
     def same_tag?(first_tag, second_tag)
-      pattern = /<([^>\s]+)[\s>]{1}.*/
+      pattern = /<([^>\s]+)[\s>].*/
       first_tagname = pattern.match(first_tag) # nil means they are not tags
       first_tagname = first_tagname[1] if first_tagname
 

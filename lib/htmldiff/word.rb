@@ -9,7 +9,7 @@ module HTMLDiff
     end
 
     def empty?
-      @word == ''
+      @word.empty?
     end
 
     def standalone_tag?
