@@ -1,7 +1,9 @@
 require 'nokogiri'
 
 module HTMLDiff
-  # Main class for building the diff output between two strings
+  # Main class for building the diff output between two strings. Other classes
+  # find out where the differences actually are, then this class turns that into
+  # HTML.
   class DiffBuilder
     attr_reader :content
 
@@ -17,6 +19,9 @@ module HTMLDiff
       content.join
     end
 
+    # These operations are a list of things that changed between the two
+    # versions, which now need to be turned into valid HTML that shows things
+    # with ins and del tags.
     def operations
       HTMLDiff::MatchFinder.new(@old_words, @new_words).operations
     end
@@ -29,15 +34,21 @@ module HTMLDiff
       send operation.action, operation
     end
 
+    # This is for when a chunk of text has been replaced with a different bit.
+    # We want to ignore tags that are the same e.g.
+    # '<p>' replaced by
+    # '<p class="highlight">'
+    # will come back from the diff algorithm as a replacement (tags are treated
+    # as words in their entirety), but we don't have any use for seeing this
+    # represented visually.
+    #
     # @param operation [HTMLDiff::Operation]
     def replace(operation)
       # Special case: a tag has been altered so that an attribute has been
       # added e.g. <p> becomes <p style="margin: 2px"> due to an editor button
       # press. For this, we just show the new version, otherwise it gets messy
       # trying to find the closing tag.
-      old_text = @old_words[operation.start_in_old...operation.end_in_old].join
-      new_text = @new_words[operation.start_in_new...operation.end_in_new].join
-      if same_tag?(old_text, new_text)
+      if operation.same_tag?
         equal(operation)
       else
         delete(operation, 'diffmod')
@@ -47,44 +58,30 @@ module HTMLDiff
 
     # @param operation [HTMLDiff::Operation]
     def insert(operation, tagclass = 'diffins')
-      words = @new_words[operation.start_in_new...operation.end_in_new]
-      insert_tag('ins', tagclass, words)
+      insert_tag('ins', tagclass, operation.new_words)
     end
 
     # @param operation [HTMLDiff::Operation]
     def delete(operation, tagclass = 'diffdel')
-      words = @old_words[operation.start_in_old...operation.end_in_old]
-      insert_tag('del', tagclass, words)
+      insert_tag('del', tagclass, operation.old_words)
     end
 
+    # No difference between these parts of the text. No tags to insert, simply
+    # copy the matching words from one of the versions.
+    #
     # @param operation [HTMLDiff::Operation]
     def equal(operation)
-      # no tags to insert, simply copy the matching words from one of the
-      # versions
-      @content += @new_words[operation.start_in_new...operation.end_in_new].to_a
-    end
-
-    # Ignores any attributes and tells us if the tag is the same e.g. <p> and
-    # <p style="margin: 2px;">
-    def same_tag?(first_tag, second_tag)
-      pattern = /<([^>\s]+)[\s>].*/
-      first_tagname = pattern.match(first_tag) # nil means they are not tags
-      first_tagname = first_tagname[1] if first_tagname
-
-      second_tagname = pattern.match(second_tag)
-      second_tagname = second_tagname[1] if second_tagname
-
-      first_tagname && (first_tagname == second_tagname)
+      @content << operation.new_text
     end
 
     # This method encloses words within a specified tag (ins or del), and adds
     # this into @content, with a twist: if there are words contain tags, it
     # actually creates multiple ins or del, so that they don't include any ins
-    # or del. This handles cases like
+    # or del tags that are not properly nested. This handles cases like
     # old: '<p>a</p>'
     # new: '<p>ab</p><p>c</p>'
     # diff result: '<p>a<ins>b</ins></p><p><ins>c</ins></p>'
-    # this still doesn't guarantee valid HTML (hint: think about diffing a text
+    # This still doesn't guarantee valid HTML (hint: think about diffing a text
     # containing ins or del tags), but handles correctly more cases than the
     # earlier version.
     #
@@ -97,24 +94,24 @@ module HTMLDiff
         break if words.empty?
 
         if words.first.standalone_tag?
-          img_tag = words.extract_consecutive_words! do |word|
+          tag_words = words.extract_consecutive_words! do |word|
             word.standalone_tag?
           end
-          @content << wrap_text(img_tag, tagname, cssclass)
+          @content << wrap_text_in_diff_tag(tag_words.join, tagname, cssclass)
         elsif words.first.iframe_tag?
-          img_tag = words.extract_consecutive_words! { |word| word.iframe_tag? }
-          @content << wrap_text(img_tag, tagname, cssclass)
+          tag_words = words.extract_consecutive_words! { |word| word.iframe_tag? }
+          @content << wrap_text_in_diff_tag(tag_words.join, tagname, cssclass)
         elsif words.first.tag?
 
-          # If this chunk of text contains orphaned tags, then wrapping it will
+          # If this chunk of text contains unclosed tags, then wrapping it will
           # cause weirdness. This would be the case if we have e.g. a style
           # applied to a paragraph tag, which will change the opening tag, but
           # not the closing tag.
           #
-          # If we do decide to wrap the whole
+          #
 
           if !wrapped && !words.contains_unclosed_tag?
-            @content << wrap_start(tagname, cssclass)
+            @content << diff_tag_start(tagname, cssclass)
             wrapped = true
           end
           @content += words.extract_consecutive_words! do |word|
@@ -125,28 +122,25 @@ module HTMLDiff
             (word.standalone_tag? || !word.tag?)
           end
           unless non_tags.join.empty?
-            @content << wrap_text(non_tags.join, tagname, cssclass)
+            @content << wrap_text_in_diff_tag(non_tags.join, tagname, cssclass)
           end
 
           break if words.empty?
         end
       end
 
-      @content << wrap_end(tagname) if wrapped
+      @content << diff_tag_end(tagname) if wrapped
     end
 
-    def wrap_text(text, tagname, cssclass)
-      [wrap_start(tagname, cssclass),
-       text,
-       wrap_end(tagname)
-      ].join
+    def wrap_text_in_diff_tag(text, tagname, cssclass)
+      diff_tag_start(tagname, cssclass) + text + diff_tag_end(tagname)
     end
 
-    def wrap_start(tagname, cssclass)
+    def diff_tag_start(tagname, cssclass)
       %(<#{tagname} class="#{cssclass}">)
     end
 
-    def wrap_end(tagname)
+    def diff_tag_end(tagname)
       %(</#{tagname}>)
     end
   end

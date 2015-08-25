@@ -184,14 +184,16 @@ module HTMLDiff
       if action_upto_match_positions != :none
         operation_upto_match_positions =
           Operation.new(action_upto_match_positions,
-                        @position_in_old, match.start_in_old,
-                        @position_in_new, match.start_in_new)
+                        @old_words[@position_in_old...match.start_in_old],
+                        @new_words[@position_in_new...match.start_in_new]
+          )
         @operations << operation_upto_match_positions
       end
       if match.size != 0
         match_operation = Operation.new(:equal,
-                                        match.start_in_old, match.end_in_old,
-                                        match.start_in_new, match.end_in_new)
+                                        @old_words[match.start_in_old...match.end_in_old],
+                                        @new_words[match.start_in_new...match.end_in_new]
+        )
         @operations << match_operation
       end
 
