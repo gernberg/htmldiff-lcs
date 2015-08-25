@@ -37,7 +37,8 @@ describe 'HTMLDiff' do
         <table>
         <tbody>
         <tr><td>hello</td><td>bye</td></tr>
-        <del class="diffdel"><tr><td><del class="diffdel">remove</del></td><td><del class="diffdel">me</del></td></tr><del class="diffdel">
+        <del class="diffdel"><tr><td><del class="diffdel">remove</del></td>'\
+        '<td><del class="diffdel">me</del></td></tr><del class="diffdel">
         </del></del></tbody>
         </table>')
       end
