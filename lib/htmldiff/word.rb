@@ -38,12 +38,20 @@ module HTMLDiff
       @word =~ %r{^\s*</[^>]+>\s*$}
     end
 
+    def block_tag?
+      @word =~ /^<div[^<]*class="[^"]*#{block_tag_class}[^"]*"/
+    end
+
     def to_s
       @word
     end
 
     def ==(other)
       @word == other
+    end
+
+    def block_tag_class
+      @block_tag_class ||= 'block_tag'
     end
   end
 end

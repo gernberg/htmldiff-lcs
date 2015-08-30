@@ -8,10 +8,16 @@ module HTMLDiff
     attr_reader :content
 
     def initialize(old_version, new_version, options = {})
-      @old_words = ListOfWords.new old_version
-      @new_words = ListOfWords.new new_version
-      @options = options
+      @options = default_options.merge options
+      @old_words = ListOfWords.new old_version, @options
+      @new_words = ListOfWords.new new_version, @options
       @content = []
+    end
+
+    def default_options
+      {
+        block_tag_classes: []
+      }
     end
 
     def build
@@ -100,6 +106,9 @@ module HTMLDiff
           @content << wrap_text_in_diff_tag(tag_words.join, tagname, cssclass)
         elsif words.first.iframe_tag?
           tag_words = words.extract_consecutive_words! { |word| word.iframe_tag? }
+          @content << wrap_text_in_diff_tag(tag_words.join, tagname, cssclass)
+        elsif words.first.block_tag?
+          tag_words = words.extract_consecutive_words! { |word| word.block_tag? }
           @content << wrap_text_in_diff_tag(tag_words.join, tagname, cssclass)
         elsif words.first.tag?
 

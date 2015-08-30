@@ -7,6 +7,12 @@ describe HTMLDiff::ListOfWords do
       words_as_array = HTMLDiff::ListOfWords.new(input).to_a.map(&:to_s)
       expect(words_as_array).to eq %w(<p> input </p>)
     end
+
+    it 'separates block tags' do
+      input = '<p>text<div class="block_tag"><img src="something" /></div></p>'
+      words_as_array = HTMLDiff::ListOfWords.new(input, {block_tag_class: 'inserted'}).to_a.map(&:to_s)
+      expect(words_as_array).to eq ['<p>', 'text', '<div class="block_tag"><img src="something" /></div>', '</p>']
+    end
   end
 
   describe 'contains_unclosed_tag?' do

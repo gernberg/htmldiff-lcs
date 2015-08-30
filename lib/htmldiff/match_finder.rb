@@ -8,19 +8,23 @@ module HTMLDiff
     def initialize(old_words, new_words)
       @old_words = old_words
       @new_words = new_words
+      @matching_blocks = []
+      @new_word_indices = Hash.new { |h, word| h[word] = [] }
     end
 
     def operations
       index_new_words
+      locate_matching_blocks
       define_operations
       @operations
     end
 
     # This leaves us with { first => [1], 'second' => [2, 3] } to tell us where
     # in @new_words each word appears.
+    #
+    # %w(ant bat cat ant) => { ant => [0, 3], bat => 1, cat => 2}
     def index_new_words
-      @word_indices = Hash.new { |h, word| h[word] = [] }
-      @new_words.each_with_index { |word, i| @word_indices[word.to_s] << i }
+      @new_words.each_with_index { |word, i| @new_word_indices[word.to_s] << i }
     end
 
     # This gets an array of the sections of the two strings that match, then
@@ -36,7 +40,7 @@ module HTMLDiff
       @position_in_old = @position_in_new = 0
       @operations = []
 
-      matching_blocks.each do |match|
+      @matching_blocks.each do |match|
         create_operation_from(match)
       end
     end
@@ -45,64 +49,80 @@ module HTMLDiff
     # strings. Each array item is an instance of Match, which contains the
     # start index of the match in @old_words, the start index in @new_words,
     # and the length in number of words.
-    def matching_blocks
-      matching_blocks = []
-      recursively_find_matching_blocks(0, @old_words.count, 0,
-                                       @new_words.count, matching_blocks)
+    def locate_matching_blocks
+      recursively_find_matching_blocks_in_range(0, @old_words.count,
+                                                0, @new_words.count)
+
       # an empty match at the end forces the loop to make operations to handle
       # the unmatched tails I'm sure it can be done more gracefully, but not at
       # 23:52
-      matching_blocks << HTMLDiff::Match.new(@old_words.count,
-                                             @new_words.count, 0)
+      @matching_blocks << HTMLDiff::Match.new(@old_words.count,
+                                              @new_words.count, 0)
     end
 
-    # The first time this is called, it checks the whole of the two strings.
+    # The first time this is called, it checks the whole of the two strings and
+    # finds the longest match between them.
     # It then recursively checks the gaps that are left either side of the
     # longest match, until there are no smaller matches.
-    def recursively_find_matching_blocks(start_in_old, end_in_old, start_in_new,
-                                         end_in_new, matching_blocks)
+    def recursively_find_matching_blocks_in_range(start_in_old,
+                                                  end_in_old,
+                                                  start_in_new,
+                                                  end_in_new)
       # Longest match in the given range.
-      match = find_match(start_in_old, end_in_old, start_in_new, end_in_new)
-      return unless match
-      # The match is not at the start of either range
-      if start_in_old < match.start_in_old && start_in_new < match.start_in_new
+      longest_match = find_longest_match_between_ranges(start_in_old,
+                                                        end_in_old,
+                                                        start_in_new,
+                                                        end_in_new)
+      return unless longest_match.size > 0
+
+
+      if start_in_old < longest_match.start_in_old &&
+         start_in_new < longest_match.start_in_new
+        # The match is not at the start of either range.
         # Search the gap before the longest match and add any smaller matches
         # from there.
-        recursively_find_matching_blocks(start_in_old, match.start_in_old,
-                                         start_in_new, match.start_in_new,
-                                         matching_blocks)
+        recursively_find_matching_blocks_in_range(start_in_old,
+                                                  longest_match.start_in_old,
+                                                  start_in_new,
+                                                  longest_match.start_in_new)
       end
+
       # Add the longest match
-      matching_blocks << match
-      # The match is not at the end of either range.
-      if match.end_in_old < end_in_old && match.end_in_new < end_in_new
+      @matching_blocks << longest_match
+
+      if longest_match.end_in_old < end_in_old &&
+         longest_match.end_in_new < end_in_new
+        # The match is not at the end of either range.
         # Search the gap after the longest match and add any smaller matches
         # from there
-        recursively_find_matching_blocks(match.end_in_old, end_in_old,
-                                         match.end_in_new, end_in_new,
-                                         matching_blocks)
+        recursively_find_matching_blocks_in_range(longest_match.end_in_old,
+                                                  end_in_old,
+                                                  longest_match.end_in_new,
+                                                  end_in_new)
       end
     end
 
     # This will find the longest matching set of words when comparing the given
-    # ranges in @old_words and @new_words.
+    # ranges in @old_words and @new_words. This function is used recursively, so
+    # the variables should not be class variables.
+    #
     # @return [HTMLDiff::Match]
-    def find_match(start_in_old, end_in_old, start_in_new, end_in_new)
-      start_of_best_match_in_old = start_in_old
-      start_of_best_match_in_new = start_in_new
-      best_match_size = 0
+    def find_longest_match_between_ranges(start_in_old, end_in_old,
+                                          start_in_new, end_in_new)
+      best_match = HTMLDiff::Match.new 0, 0, 0
+      matches = []
 
       # A match is a string of words which is in both @old_words and @new words
       # at a certain position. Keep track of the length of matches starting at
-      # each index position in @new_words. # e.g. if the match length at index
+      # each index position in @new_words. e.g. if the match length at index
       # 4 = 3, then that means that the fourth word in @new_words is the
       # end of a 3-word-long match.
       #
       # If there are two matches of the same size, it'll get the first one.
-      match_length_at = Hash.new { |h, index| h[index] = 0 }
+      match_lengths_at_previous_index_positions_in_new = Hash.new { |h, index| h[index] = 0 }
 
       # Start at the beginning position in @old_words and move forwards one
-      # word at a time
+      # word at a time.
       start_in_old.upto(end_in_old - 1) do |index_in_old|
         # This will store the match lengths for all words so far up to the
         # current word. Just looking at this word, the lengths will all be 1,
@@ -112,42 +132,55 @@ module HTMLDiff
         #
         # If the current word is a continuation of a match, then we will
         # increment the match length and store it for the current index
-        # position in @new_words.
-        new_match_length_at = Hash.new { |h, index| h[index] = 0 }
+        # position in @new_words. We replace the old hash because then we
+        # ignore the previous match that has now been extended and any that have
+        # stopped.
+        match_lengths_at_current_index_positions_in_new = Hash.new { |h, index| h[index] = 0 }
 
         # Take the word which is at this position in @old_words,
         # then for each position it occurs in within @new_words...
-        @word_indices[@old_words[index_in_old].to_s].each do |index_in_new|
-          # Skip if we've moved past this position in @new_words already.
+        current_word_in_old = @old_words[index_in_old].to_s
+        @new_word_indices[current_word_in_old].each do |index_in_new|
+          # Skip if this position is before the start of the range we're
+          # checking.
           next if index_in_new < start_in_new
-          # Stop at the end position we are checking up to in @new_words
+          # Since the indices in @new_words start at the earliest occurrence
+          # and are in order, if we are now after the end of the range we are
+          # checking, then all later occurrences can be ignored.
           break if index_in_new >= end_in_new
 
           # Add 1 to the length of the match we have for the previous word
           # position in @new_words. i.e. we are moving along @old words,
-          # ticking off letters in @new_words as we go.
-          new_match_length = match_length_at[index_in_new - 1] + 1 # Will be zero if the previous word in @new_words has not been marked as a match
-          new_match_length_at[index_in_new] = new_match_length
+          # ticking off the words in @new_words as we go.
+          #
+          # Will be zero if the previous word in @new_words has not been marked
+          # as a match.
+
+          new_match_length = match_lengths_at_previous_index_positions_in_new[index_in_new - 1] + 1
+          match_lengths_at_current_index_positions_in_new[index_in_new] = new_match_length
 
           # Keep track of the longest match so we can return it.
-          if new_match_length > best_match_size
+          if new_match_length > best_match.size
             start_of_best_match_in_old = index_in_old - new_match_length + 1
             start_of_best_match_in_new = index_in_new - new_match_length + 1
-            best_match_size = new_match_length
+
+            best_match = HTMLDiff::Match.new(start_of_best_match_in_old,
+                                             start_of_best_match_in_new,
+                                             new_match_length)
+
+            # best_match = HTMLDiff::NewMatch.new(index_in_old - new_match_length + 1, index_in_old,
+            #                                     index_in_new - new_match_length + 1, index_in_new
+            #                                  )
           end
         end
 
         # We have now added the current word to all the matches we had so far,
         # making some of them longer by 1. Any matches that are shorter (didn't
         # have the current word as the next word) are discarded.
-        match_length_at = new_match_length_at
+        match_lengths_at_previous_index_positions_in_new = match_lengths_at_current_index_positions_in_new
       end
 
-      return if best_match_size == 0
-
-      HTMLDiff::Match.new(start_of_best_match_in_old,
-                          start_of_best_match_in_new,
-                          best_match_size)
+      best_match
     end
 
     # @param [HTMLDiff::Match] match
