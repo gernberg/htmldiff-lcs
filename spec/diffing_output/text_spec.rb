@@ -5,8 +5,8 @@ describe 'HTMLDiff' do
     describe 'text' do
       it 'should diff text' do
         diff = HTMLDiff.diff('a word is here', 'a nother word is there')
-        expect(diff).to eq("a<ins class=\"diffins\"> nother</ins> word is "\
-        "<del class=\"diffmod\">here</del><ins class=\"diffmod\">there</ins>")
+        expect(diff).to eq("a <del class=\"diffmod\">word is here</del>"\
+        "<ins class=\"diffmod\">nother word is there</ins>")
       end
 
       it 'should insert a letter and a space' do
@@ -28,11 +28,9 @@ describe 'HTMLDiff' do
       it 'supports Chinese' do
         diff = HTMLDiff.diff('这个是中文内容, Ruby is the bast',
                              '这是中国语内容，Ruby is the best language.')
-        expect(diff).to eq("这<del class=\"diffdel\">个</del>是中<del "\
-        "class=\"diffmod\">文</del><ins class=\"diffmod\">国语</ins>内容<del "\
-        "class=\"diffmod\">, Ruby</del><ins class=\"diffmod\">，Ruby</ins> is "\
-        "the <del class=\"diffmod\">bast</del><ins class=\"diffmod\">best "\
-        'language.</ins>')
+        expect(diff).to eq("这<del class=\"diffmod\">个是中文内容, "\
+        "Ruby is the bast</del><ins class=\"diffmod\">是中国语内容，"\
+        'Ruby is the best language.</ins>')
       end
 
       it 'puts long bit of replaced text together, rather than '\
