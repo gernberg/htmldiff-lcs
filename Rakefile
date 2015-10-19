@@ -33,8 +33,7 @@ task default: :spec
 
 desc 'Run specs'
 RSpec::Core::RakeTask.new do |t|
-  t.spec_files = FileList['spec/**/*_spec.rb']
-  t.spec_opts = %w(-fs --color)
+  t.rspec_opts = %w(-fs --color)
 end
 
 Gem::PackageTask.new(spec) do |pkg|
