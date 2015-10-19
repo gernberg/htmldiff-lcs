@@ -47,7 +47,7 @@ module HTMLDiff
     end
 
     def ==(other)
-      @word == other
+      @word == other.to_s
     end
 
     def block_tag_class

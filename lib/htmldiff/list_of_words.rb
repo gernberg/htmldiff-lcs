@@ -27,6 +27,10 @@ module HTMLDiff
         @words[index]
       end
     end
+    
+    def size
+      @words.size
+    end
 
     def join(&args)
       @words.join(args)
