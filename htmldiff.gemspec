@@ -22,6 +22,8 @@ Gem::Specification.new do |s|
   s.rubygems_version = '1.3.1'
   s.summary = 'HTML diffs of text (borrowed from a wiki software '\
   'I no longer remember)'
+  
+  s.add_runtime_dependency('diff-lcs', ['>= 0'])
 
   s.specification_version = 2 if s.respond_to? :specification_version
 end
