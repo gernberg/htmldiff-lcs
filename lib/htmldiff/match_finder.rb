@@ -62,7 +62,31 @@ module HTMLDiff
     end
     
     def sdiff_sliced
-      @sdiff_sliced ||= sdiff.slice_when { |a, b| a.action != b.action }
+      @sdiff_sliced ||= begin
+        # Writing out the JRuby implementation of slice_when here, essentially, for backwards
+        # compat with older Ruby versions
+        result = []
+        ary = nil
+        last_after = nil
+        sdiff.each_cons(2) do |before, after|
+          last_after = after
+          match = (before.action != after.action)
+          
+          ary ||= []
+          ary << before
+          if match
+            result << ary
+            ary = []
+          end
+        end
+        
+        unless ary.nil?
+          ary << last_after
+          result << ary
+        end
+        
+        result
+      end
     end
     
     def create_match_from(context_change_segment)
