@@ -26,6 +26,11 @@ module HTMLDiff
 
       first_tagname && (first_tagname == second_tagname)
     end
+    
+    def same_content?
+      pattern = /<([^>]+)[>].*/
+      old_text.gsub(pattern, '') == new_text.gsub(pattern, '')
+    end
 
     def old_text
       old_words.join
