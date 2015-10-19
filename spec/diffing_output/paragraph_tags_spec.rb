@@ -22,21 +22,21 @@ describe 'HTMLDiff' do
           doc_a = '<p> Test Paragraph </p>weee<p>More Stuff</p>'
           doc_b = '<p>Nothing!</p>weee'
           diff = HTMLDiff.diff(doc_a, doc_b)
-          expect(diff).to eq('<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<del class="diffdel"><p><del class="diffdel">More Stuff</del></p></del>')
+          expect(diff).to eq("<p><del class=\"diffmod\"> Test Paragraph </del></p><del class=\"diffmod\">weee</del><del class=\"diffmod\"><p><del class=\"diffmod\">More Stuff</del></p></del><ins class=\"diffmod\">Nothing!</ins></p><ins class=\"diffmod\">weee</ins>")
         end
 
         it 'changes inside plus deleted consecutive paragraph, plus deleted consecutive text' do
           doc_a = '<p> Test Paragraph </p>weee<p>More Stuff</p>'
           doc_b = '<p>Nothing!</p>'
           diff = HTMLDiff.diff(doc_a, doc_b)
-          expect(diff).to eq('<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p><del class="diffdel">weee</del><del class="diffdel"><p><del class="diffdel">More Stuff</del></p></del>')
+          expect(diff).to eq("<p><del class=\"diffmod\"> Test Paragraph </del><del class=\"diffmod\"></p><del class=\"diffmod\">weee</del><p><del class=\"diffmod\">More Stuff</del></del><ins class=\"diffmod\">Nothing!</ins></p>")
         end
 
         it 'changes inside plus deleted consecutive paragraph, leaving text afterwards with some extra text' do
           doc_a = '<p> Test Paragraph </p>weee<p>More Stuff</p>asd'
           doc_b = '<p>Nothing!</p>weee asd'
           diff = HTMLDiff.diff(doc_a, doc_b)
-          expect(diff).to eq('<p><del class="diffmod"> Test Paragraph </del><ins class="diffmod">Nothing!</ins></p>weee<del class="diffmod"><p><del class="diffmod">More Stuff</del></p></del><ins class="diffmod"> </ins>asd')
+          expect(diff).to eq("<p><del class=\"diffmod\"> Test Paragraph </del></p><del class=\"diffmod\">weee</del><del class=\"diffmod\"><p><del class=\"diffmod\">More Stuff</del></p></del><ins class=\"diffmod\">Nothing!</ins></p><ins class=\"diffmod\">weee </ins>asd")
         end
       end
 
