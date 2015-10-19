@@ -24,8 +24,7 @@ Gem::Specification.new do |s|
   s.homepage = 'http://github.com/nbudin/htmldiff-lcs'
   s.require_paths = ['lib']
   s.rubygems_version = '1.3.1'
-  s.summary = 'HTML diffs of text (borrowed from a wiki software '\
-  'I no longer remember)'
+  s.summary = 'HTML diffs of text, based on diff-lcs'
   
   s.add_runtime_dependency('diff-lcs', ['>= 0'])
 
