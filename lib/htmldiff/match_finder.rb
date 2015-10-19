@@ -1,3 +1,5 @@
+require 'diff/lcs'
+
 module HTMLDiff
   # This class is responsible for comparing the list of old and new words and
   # coming up with a list of insert, delete and replace operations, which the
